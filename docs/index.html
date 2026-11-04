@@ -184,7 +184,7 @@
   .bar .desk { height: 86px; display: grid; place-items: center; color: #e6eaf2; font-size: 13px; }
 
   /* Problems it fixes */
-  .problems { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .problems { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
   .prob { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 18px; box-shadow: var(--shadow); display: grid; gap: 12px; align-content: start; }
   .prob p { margin: 0; color: var(--muted); font-size: 15px; }
   .prob .vis { background: var(--bg); border: 1px solid var(--line); border-radius: 14px; padding: 14px; min-height: 150px; display: grid; gap: 10px; align-content: center; }
@@ -262,6 +262,57 @@
   .all li { margin: 5px 0; }
   .tag { font-size: 11px; font-weight: 700; color: var(--ink); background: var(--lime-soft); border: 1px solid var(--lime); border-radius: 6px; padding: 0 5px; margin-left: 4px; vertical-align: 1px; }
 
+  /* Prøv den her: a copy of the window, played on the page */
+  .demo { display: grid; grid-template-columns: 360px 1fr; gap: 28px; align-items: start; }
+  .dleft { display: grid; gap: 10px; }
+  .dmenubar { display: flex; justify-content: flex-end; align-items: center; gap: 10px; height: 28px; padding: 0 10px; border-radius: 8px; background: #e9edf3; font-size: 13px; font-weight: 600; }
+  .dgrey { width: 16px; height: 10px; border-radius: 2px; background: rgba(0, 0, 0, 0.35); }
+  .dpill { padding: 1px 8px; border-radius: 6px; }
+  .dpill.warn { color: #b35a00; outline: 2px solid #E67E22; }
+  .dpill.crit { color: #c0392b; outline: 2px solid #c0392b; }
+  .dwin { background: #F5F6FA; border: 1px solid var(--line); border-radius: 16px; padding: 10px; display: grid; gap: 8px; box-shadow: var(--shadow); font-size: 14px; }
+  .dhead { display: flex; align-items: center; gap: 8px; background: var(--ink); color: #fff; border-radius: 10px; padding: 8px 12px; font-weight: 700; }
+  .ddot { width: 9px; height: 9px; border-radius: 50%; background: var(--lime); }
+  .dcard { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; display: grid; gap: 6px; }
+  .drow { display: flex; justify-content: space-between; gap: 10px; }
+  .dclock { font-weight: 800; font-variant-numeric: tabular-nums; }
+  .dclock.warn, .dcue.warn { color: #b35a00; }
+  .dclock.crit, .dcue.crit { color: #c0392b; }
+  .dsub { color: var(--faint); font-size: 12px; }
+  .dtalk { display: flex; align-items: center; gap: 12px; }
+  .dtalk b { font: 800 34px Poppins, sans-serif; line-height: 1; }
+  .dtalk b.ok { color: #27AE60; } .dtalk b.warn { color: #E67E22; } .dtalk b.crit { color: #c0392b; }
+  .dbar { position: relative; height: 10px; border-radius: 5px; background: #e6eaf0; }
+  .dband { position: absolute; top: -3px; bottom: -3px; border: 2px solid var(--lime); background: var(--lime-soft); border-radius: 4px; }
+  .dfill { position: absolute; left: 0; top: 0; bottom: 0; background: var(--ink); border-radius: 5px; transition: width .3s; }
+  .dcue { font-weight: 600; font-size: 15px; padding: 8px 10px; border-radius: 8px; background: #F5F6FA; border-left: 4px solid var(--lime); }
+  .dcue.calm { font-weight: 400; color: var(--faint); border-left-color: var(--line); }
+  .dcue.talk { border-left-color: #E67E22; }
+  .dcue.warn { border-left-color: #E67E22; } .dcue.crit { border-left-color: #c0392b; }
+  .dsrc { font-size: 11px; color: var(--green); font-weight: 700; margin-left: 4px; }
+  .dag { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+  .dag label { display: flex; gap: 8px; align-items: center; font-weight: 600; cursor: pointer; }
+  .dag input { accent-color: #4d7d0d; width: 16px; height: 16px; }
+  .dag li.done span { color: var(--faint); text-decoration: line-through; }
+  .dag small { display: block; margin-left: 24px; color: var(--faint); font-size: 11px; }
+  .dwin textarea, .dctl textarea, .dctl select { width: 100%; font: 14px/1.4 Poppins, sans-serif; border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; background: #fff; color: var(--ink); }
+  .dlines { display: grid; gap: 4px; font-size: 13px; color: var(--muted); }
+  .dlines b { color: var(--ink); }
+  .dres { border-color: var(--lime); }
+  .dres[hidden] { display: none; }
+  .dverdict { font-weight: 700; margin: 0; }
+  .dbook { display: grid; gap: 2px; background: var(--lime-soft); border: 1px solid var(--lime); border-radius: 8px; padding: 8px 10px; }
+  .dctl { display: grid; gap: 10px; align-content: start; background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 18px; box-shadow: var(--shadow); }
+  .dbtns { display: flex; gap: 8px; flex-wrap: wrap; }
+  .dbtns .btn { padding: 11px 16px; font-size: 14px; }
+  .dlbl { font-weight: 600; font-size: 14px; margin-top: 4px; }
+  /* the GDPR rules */
+  .rules { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-top: 24px; }
+  .rule { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; }
+  .rule h3 { font-size: 16px; }
+  .rule p { margin: 4px 0 0; color: var(--muted); font-size: 14px; }
+  .rule .us { color: var(--green); font-weight: 600; }
+
   /* Needs, privacy */
   .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
   .card { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 20px; box-shadow: var(--shadow); }
@@ -284,7 +335,7 @@
   footer .links { display: flex; flex-wrap: wrap; gap: 18px; margin-top: 14px; font-size: 14px; }
 
   @media (max-width: 820px) {
-    .hero, .shot-row, .step, .cards, .problems, .gdpr, .all { grid-template-columns: 1fr; }
+    .hero, .shot-row, .step, .cards, .problems, .gdpr, .all, .demo, .rules { grid-template-columns: 1fr; }
     .hub { grid-template-columns: 1fr; justify-items: center; }
     .hub .col { width: 100%; }
     .hero h1 { font-size: 40px; }
@@ -306,7 +357,7 @@
       <p class="meta">Gratis. Til en Mac med Apple Silicon (M1 eller nyere) og macOS 14.4 eller nyere.<span id="ver"></span></p>
       <div class="cta">
         <a class="btn primary" href="#install">Installér på din Mac</a>
-        <a class="btn ghost" href="#fixes">Se, hvad den løser</a>
+        <a class="btn ghost" href="#try">Prøv den her på siden</a>
       </div>
       <p class="phone-note">Du er på en telefon. Åbn siden på din Mac for at installere.</p>
     </div>
@@ -324,9 +375,58 @@
     </div>
   </header>
 
+  <section id="try">
+    <h2>Prøv den her</h2>
+    <p class="lead">Et kort, opdigtet første møde spiller her på siden, uden lyd. Sæt din egen dagsorden ind, kryds af, tag noter, skift mødetype og spol frem. Så ser du, hvad coachen ser.</p>
+    <div class="demo">
+      <div class="dleft">
+        <div class="dmenubar" aria-hidden="true"><span class="dgrey"></span><span id="d-mb" class="dpill">Coach</span><span>Tor 10:00</span></div>
+        <div class="dwin">
+          <div class="dhead"><span class="ddot"></span>Sales Coach</div>
+          <div class="dcard"><div class="drow"><b>Intro: Byg &amp; Bad</b><span id="d-clock" class="dclock">0:00 / 20:00</span></div>
+            <div class="dsub"><span id="d-kindname">Første møde</span> · mål <span id="d-target">30-45</span>% dig</div></div>
+          <div class="dcard"><div class="dtalk"><b id="d-share" class="ok">--%</b><span id="d-split" class="dsub">dig 0:00 · dem 0:00</span></div>
+            <div class="dbar"><div id="d-band" class="dband"></div><div id="d-fill" class="dfill"></div></div>
+            <div id="d-pause" class="dsub"></div></div>
+          <div class="dcard"><b>Nu</b><div id="d-cue" class="dcue">Tryk Start, så begynder mødet.</div></div>
+          <div class="dcard"><b>Din dagsorden</b><ul id="d-agenda" class="dag"></ul></div>
+          <div class="dcard"><b>Dine noter</b><textarea id="d-notes" rows="2" placeholder="Tag noter her"></textarea></div>
+          <div class="dcard"><b>Live transskription</b><div id="d-lines" class="dlines"><span class="dsub">Lytter...</span></div></div>
+          <div class="dcard dres" id="d-result" hidden>
+            <b>Resultat, 10 sek. efter opkaldet</b>
+            <p class="dverdict">Godt mål og aftalt møde, men månedsbeløbet i kroner mangler stadig.</p>
+            <div class="dbook"><b>Næste møde: tor 10:00, 45 min</b><span class="dsub">Møde: Jesper og Anna</span></div>
+            <div class="dsub" id="d-resnum"></div>
+            <div class="dsub"><b>Spørg næste gang:</b> Hvad koster bogføringen jer om måneden?</div>
+          </div>
+        </div>
+      </div>
+      <div class="dctl">
+        <div class="dbtns"><button type="button" class="btn primary" id="d-play">Start mødet</button><button type="button" class="btn ghost" id="d-restart">Forfra</button></div>
+        <label class="dlbl" for="d-kind">Mødetype</label>
+        <select id="d-kind">
+          <option value="30,45">Første møde (mål 30-45% dig)</option>
+          <option value="45,60">Gennemgang (mål 45-60% dig)</option>
+          <option value="35,50">Forhandling (mål 35-50% dig)</option>
+          <option value="25,40">Jobsamtale (mål 25-40% dig)</option>
+          <option value="30,45">1:1-samtale (mål 30-45% dig)</option>
+          <option value="70,90">Oplæg (mål 70-90% dig)</option>
+        </select>
+        <div class="dbtns"><button type="button" class="btn ghost" id="d-near">Spol til 5 min før slut</button><button type="button" class="btn ghost" id="d-over">Spol til over tid</button></div>
+        <label class="dlbl" for="d-agin">Din dagsorden, et punkt pr. linje</label>
+        <textarea id="d-agin" rows="4">Bogføringen i dag
+Hvad det koster
+Hvem bestemmer
+Næste møde</textarea>
+        <div class="dbtns"><button type="button" class="btn ghost" id="d-use">Brug min dagsorden</button><button type="button" class="btn ghost" id="d-copy">Kopiér alt til en AI-chat</button></div>
+        <p class="small">I demoen bliver et punkt krydset af, når ordene fra punktet bliver sagt, og den anden part har svaret. I appen forstår Claude meningen, på dansk og engelsk. Prøv Oplæg som mødetype: så taler Anna for lidt.</p>
+      </div>
+    </div>
+  </section>
+
   <section id="fixes">
     <h2>Det løser den</h2>
-    <p class="lead">De små problemer i en dag fuld af møder. De her tre virker fra første møde, uden opsætning og uden AI.</p>
+    <p class="lead">De små problemer i en dag fuld af møder. De her fire virker fra første møde, uden opsætning og uden AI.</p>
     <div class="problems">
       <div class="prob">
         <div class="vis" aria-hidden="true">
@@ -351,8 +451,17 @@
           <div class="talk"><b>43%</b><span>dig, de sidste 5 min 43%<br>mål 30-45% på et første møde</span></div>
           <div class="meter"><div class="band"></div><div class="fill"></div></div>
         </div>
-        <h3>Du taler for meget</h3>
-        <p>Din andel af taletiden, live, mod et mål for mødetypen. Et første møde vil have dig til at lytte, en gennemgang lader dig præsentere. Taler du over et minut i træk på et første møde (længere på en gennemgang), beder den dig stoppe og spørge.</p>
+        <h3>Du taler for meget, eller for lidt</h3>
+        <p>Din andel af taletiden, live, mod et mål for mødetypen. Et første møde vil have dig til at lytte, et oplæg vil have dig til at tale. Taler du for meget, beder den dig spørge og være stille. Taler du for lidt, beder den dig tage styringen.</p>
+        <span class="noai">Virker uden AI</span>
+      </div>
+      <div class="prob">
+        <div class="vis" aria-hidden="true">
+          <div class="dsub" style="font-size:13px">Pause efter dine spørgsmål: 3 af 5 fik lov at svare, typisk efter 1,1 sek.</div>
+          <div class="cuebox" style="border-left-color:#E67E22">Efter dit spørgsmål: vent 3-5 sekunder, og lad dem svare</div>
+        </div>
+        <h3>Du svarer selv på dine spørgsmål</h3>
+        <p>Efter hvert spørgsmål måler den pausen, til nogen siger noget. Fylder du selv pausen et par gange, minder den dig om at vente. Bagefter og over ugerne kan du se, hvor tit de fik lov at svare.</p>
         <span class="noai">Virker uden AI</span>
       </div>
     </div>
@@ -371,7 +480,7 @@
       </figure>
       <ol class="points">
         <li><span class="n">1</span><div><h3>Uret og mødetypen</h3>
-          <p>Tiden mod mødets længde. Mødetypen (første møde, gennemgang, lukkemøde) læses ud fra invitationen, og du kan skifte den.</p></div></li>
+          <p>Tiden mod mødets længde. Mødetypen læses ud fra invitationen, og du kan skifte den: første møde, genoptag, gennemgang, lukkemøde, forhandling, partner, kundemøde, jobsamtale, 1:1-samtale, sparring, kundeservice, oplæg og team. Du kan også lave dine egne med dit eget mål.</p></div></li>
         <li><span class="n">2</span><div><h3>Din taleandel</h3>
           <p>Det grønne felt er målet for mødetypen. Den mørke streg er dig.</p></div></li>
         <li><span class="n">3</span><div><h3>Ét stikord ad gangen</h3>
@@ -383,7 +492,7 @@
   </section>
 
   <section id="agenda">
-    <h2>Din egen dagsorden, krydset af for dig</h2>
+    <h2>Din dagsorden og dine noter</h2>
     <p class="lead">Sæt din dagsorden ind, et punkt pr. linje, så krydser coachen punkterne af, mens I taler om dem. På dansk og engelsk.</p>
     <div class="shot-row">
       <div class="agmock" aria-label="Eksempel på din dagsorden i vinduet">
@@ -401,6 +510,8 @@
           <p>Coachen hører, når et punkt er dækket, og krydser det af med det, der blev sagt. Er det kun halvt dækket, står der, hvad der mangler.</p></div></li>
         <li><span class="n">3</span><div><h3>Eller kryds selv af</h3>
           <p>Et klik på et punkt krydser det af, eller tager krydset væk igen. Uden AI er det din egen tjekliste til mødet.</p></div></li>
+        <li><span class="n">4</span><div><h3>Tag noter her</h3>
+          <p>Dine egne noter står ved siden af og bliver gemt med mødet. Bagefter samler "Kopiér alt til en AI-chat" dine noter, dagsordenen, vurderingen og hele transskriptionen, klar til at sætte ind i en Claude-chat.</p></div></li>
       </ol>
     </div>
   </section>
@@ -445,7 +556,7 @@
         <li><span class="n">1</span><div><h3>Tre mål for ugen</h3>
           <p>Slut til tiden på alle møder. Hold taletiden inden for målet, og undgå lange monologer, på mindst 8 ud af 10 møder. Hvert møde er en prik, grøn eller rød, så du kan se præcis hvilke.</p></div></li>
         <li><span class="n">2</span><div><h3>Udviklingen over otte uger</h3>
-          <p>Bliver det bedre eller værre? Ugerne står ved siden af hinanden, så du ser det med det samme.</p></div></li>
+          <p>Bliver det bedre eller værre? Ugerne står ved siden af hinanden, så du ser det med det samme. Ved siden af målene: hvor tit dine spørgsmål fik lov at blive besvaret.</p></div></li>
         <li><span class="n">3</span><div><h3>Coachens læsning af dig</h3>
           <p>Hvor du står lige nu i én sætning, én ting du gør godt med et eksempel fra et af dine møder, og to ting at øve med en konkret vane eller den sætning, du kan bruge.</p></div></li>
         <li><span class="n">4</span><div><h3>Din feedback gør den bedre</h3>
@@ -484,7 +595,26 @@
           <p>Hvert gemt møde har en knap, "Slet opkaldet". Så er optagelsen, noterne og din feedback på mødet væk.</p></div></li>
       </ol>
     </div>
-    <p class="small">Det her hjælper dig med at følge reglerne, men det er ikke juridisk rådgivning. Det er dig, der optager, så du bestemmer hvorfor og hvor længe. Med AI'en slået til går teksten fra mødet til Anthropic, firmaet bag Claude. Det står i beskeden, og tjek, at vilkårene for din Claude-plan passer til erhvervsbrug.</p>
+    <h3 style="margin-top:28px;font-size:22px">Det siger reglerne</h3>
+    <div class="rules">
+      <div class="rule"><h3>Du må optage en samtale, du selv er med i</h3>
+        <p>I Danmark er det ikke strafbart at optage en samtale, du selv deltager i. Men bruger du optagelsen i din virksomhed, gælder GDPR, for stemmer og udskrifter er personoplysninger.</p></div>
+      <div class="rule"><h3>Du skal have en god grund</h3>
+        <p>Typisk en legitim interesse, fx at kunne huske, hvad I aftalte, eller et samtykke. Skriv ned, hvorfor du optager. <span class="us">Indstil coachen, så den passer til din grund.</span></p></div>
+      <div class="rule"><h3>De skal have besked</h3>
+        <p>Hvem der optager, hvorfor, hvor længe det gemmes, og at de kan sige nej. Den korte besked i chatten dækker det vigtigste, og du kan henvise til din privatlivspolitik for resten. <span class="us">Beskeden skrives for dig.</span></p></div>
+      <div class="rule"><h3>Ikke længere end nødvendigt</h3>
+        <p>Gem kun så længe, du har brug for det. <span class="us">Slet lyden og noterne efter det antal dage, du vælger.</span></p></div>
+      <div class="rule"><h3>De har ret til indsigt og sletning</h3>
+        <p>Beder de om at se, hvad du har, eller om at få det slettet, skal du kunne gøre det. <span class="us">"Kopiér alt" giver dem det hele, og "Slet opkaldet" sletter det.</span></p></div>
+      <div class="rule"><h3>Andre, der behandler data for dig</h3>
+        <p>Med AI'en slået til behandler Anthropic teksten for dig, og det kræver en databehandleraftale. Tjek, at din Claude-plan har en. <span class="us">Slå AI'en fra, så forlader intet din Mac.</span></p></div>
+      <div class="rule"><h3>Pas på følsomme oplysninger</h3>
+        <p>Taler I om helbred eller andre følsomme ting, gælder strengere regler. <span class="us">Brug "Stop og slet", eller slet lyden lige efter mødet.</span></p></div>
+      <div class="rule"><h3>Lås din Mac</h3>
+        <p>Optagelserne ligger på din disk. Slå FileVault til, så de er krypteret, hvis Mac'en bliver væk.</p></div>
+    </div>
+    <p class="small">Mere om reglerne hos <a href="https://www.datatilsynet.dk">Datatilsynet</a>. Det her hjælper dig med at følge reglerne, men det er ikke juridisk rådgivning. Det er dig, der optager, så du bestemmer hvorfor og hvor længe. Med AI'en slået til går teksten fra mødet til Anthropic, firmaet bag Claude. Det står i beskeden, og tjek, at vilkårene for din Claude-plan passer til erhvervsbrug.</p>
   </section>
 
   <section>
@@ -534,6 +664,9 @@
         <li>Nedtælling til mødets slut, i vinduet og menulinjen</li>
         <li>Din taleandel live, mod et mål for mødetypen</li>
         <li>Besked, når du taler for længe i træk</li>
+        <li>Besked, når du taler for meget, eller for lidt</li>
+        <li>Pausen efter dine spørgsmål, og besked, når du svarer selv</li>
+        <li>Dine egne noter, gemt med mødet</li>
         <li>Transskription af begge sider, dansk og engelsk</li>
         <li>Telefonopkald på højttaler: start og stop i menuen</li>
         <li>Din egen dagsorden, til at krydse af</li>
@@ -547,6 +680,8 @@
         <li>Dagsorden til næste møde, gemt til det starter</li>
         <li>Forberedelse til dine næste møder: hvem, mål og hvad der stadig er ubesvaret <span class="tag">AI</span></li>
         <li>Vinduet følger med til hvert møde, ved siden af det</li>
+        <li>13 mødetyper og dine egne, hver med sit mål</li>
+        <li>Sig til coachen, hvad du vil blive bedre til <span class="tag">AI</span></li>
       </ul></div>
       <div><h3>Efter mødet</h3><ul>
         <li>Mødet i tal: taleandel, længste monolog, tjekliste</li>
@@ -556,6 +691,7 @@
         <li>Alle dine møder under Opkald</li>
         <li>Bliv bedre: tre mål og otte ugers udvikling</li>
         <li>Coachens læsning af dig og hvad du skal øve <span class="tag">AI</span></li>
+        <li>Kopiér alt fra et møde til en AI-chat</li>
       </ul></div>
       <div><h3>Optagelser og privatliv</h3><ul>
         <li>Skriver selv i Google Meets chat, at du optager</li>
@@ -569,8 +705,26 @@
   </section>
 
   <section id="advanced">
-    <h2>Avanceret: kobl dine egne systemer på</h2>
-    <p class="lead">Her bliver det rigtig godt. Koblet på din mail, dine sms'er og din kundeliste ved coachen, hvem du taler med, før mødet starter, og holder dine systemer opdateret bagefter. Sådan kører vi den selv hos RM Marketing.</p>
+    <h2>Gør den til din egen</h2>
+    <p class="lead">Sales Coach er open source. Du kan indstille den til, hvordan du arbejder, og du kan rette i den og bygge videre selv.</p>
+    <div class="cards" style="margin-bottom:22px">
+      <div class="card"><h3>Sig, hvad du vil blive bedre til</h3>
+        <ul><li>Vælg blandt fx "Vente på svaret efter mine spørgsmål", "Få aftalt næste skridt med en dato" eller "Holde tiden"</li>
+          <li>Eller skriv selv til din coach, med dine egne ord</li>
+          <li>Coachen holder øje med det under møderne, i vurderingen bagefter og på Bliv bedre</li></ul></div>
+      <div class="card"><h3>Dine egne mødetyper</h3>
+        <ul><li>Bestyrelsesmøde, workshop eller hvad du nu holder</li>
+          <li>Med dit eget mål for, hvor meget du skal tale</li>
+          <li>Coachen genkender de indbyggede typer ud fra invitationen</li></ul></div>
+      <div class="card"><h3>Ret i den</h3>
+        <ul><li>Al kode ligger frit under MIT-licensen</li>
+          <li>Ret i den, byg videre, og del det, hvis du vil</li>
+          <li>Den kører på din Mac, så du bestemmer selv</li></ul></div>
+      <div class="card"><h3>Kobl dine egne systemer på</h3>
+        <ul><li>Mail, sms og din kundeliste, gennem en lille tilføjelse</li>
+          <li>Så ved coachen, hvem du taler med, før mødet starter</li>
+          <li>Og holder dine systemer opdateret bagefter, som vi gør hos RM Marketing</li></ul></div>
+    </div>
     <div class="hub">
       <div class="col">
         <div class="src"><svg viewBox="0 0 24 24" fill="none" stroke="#192230" stroke-width="2" stroke-linecap="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg><div><b>Din mail</b><span>det, I har skrevet sammen</span></div></div>
@@ -704,7 +858,9 @@ Sproget i dine møder [da]: <span class="ok">da</span>
     <details class="faq"><summary>Et telefonopkald, ikke et videomøde?</summary>
       <div>Sæt telefonen på højttaler, og vælg "Start telefonopkald" under "Coach" i menulinjen. Så optages begge stemmer gennem Mac'ens mikrofon.</div></details>
     <details class="faq"><summary>Hvordan opdaterer jeg den?</summary>
-      <div>Kør den samme linje i Terminal igen. Dine indstillinger og møder bliver liggende. Hvad der er nyt, står under <a href="#news">Nyt</a>.</div></details>
+      <div>Kør den samme linje i Terminal igen. Dine indstillinger og møder bliver liggende. Ændringerne står under <a href="#news">Versioner</a>.</div></details>
+    <details class="faq"><summary>Kan jeg ændre den selv?</summary>
+      <div>Ja. Koden ligger frit på GitHub under MIT-licensen. Indstil, hvad coachen skal hjælpe dig med, lav dine egne mødetyper, eller ret i koden og byg videre.</div></details>
     <details class="faq"><summary>Hvordan fjerner jeg den?</summary>
       <div>Kør det her i Terminal: <code>curl -fsSL https://rmmarketingmcc.github.io/sales-coach/install.sh | bash -s -- --uninstall</code>. Dine optagelser bliver i CallRecordings, til du selv sletter mappen.</div></details>
     <details class="faq"><summary>Noget virker ikke</summary>
@@ -712,13 +868,13 @@ Sproget i dine møder [da]: <span class="ok">da</span>
   </section>
 
   <section id="news">
-    <h2>Nyt</h2>
+    <h2>Versioner</h2>
     <div class="news" id="newslist"><p class="lead">Se <a href="https://github.com/rmmarketingmcc/sales-coach/releases">versionerne på GitHub</a>.</p></div>
   </section>
 
   <footer>
     <div class="made">Lavet af <a href="https://rm-marketing.dk" aria-label="RM Marketing"><img src="img/rm-logo.png" alt="RM Marketing"></a></div>
-    <p class="lead" style="margin:12px 0 0">Bygget til vores egne salgsmøder hos RM Marketing og delt med venner, mens vi bliver ved med at gøre den bedre.</p>
+    <p class="lead" style="margin:12px 0 0">Bygget til vores egne salgsmøder hos RM Marketing. Open source under MIT-licensen: brug den, ret i den, og gør den til din egen.</p>
     <div class="links">
       <a href="https://github.com/rmmarketingmcc/sales-coach">Kildekoden på GitHub</a>
       <a href="https://github.com/rmmarketingmcc/sales-coach/issues/new">Rapportér et problem</a>
@@ -727,7 +883,139 @@ Sproget i dine møder [da]: <span class="ok">da</span>
   </footer>
 </main>
 <script>
-  // versionen og "Nyt" kommer fra docs/changelog.json, som hver udgivelse skriver
+  // ---- "Prøv den her": a made-up first meeting, played in a copy of the window. The numbers are worked out
+  // here the way the app does them: talk share from who speaks, the pause after each question, the clock against
+  // the calendar. The coach's own cues and result are taken from the app on the same made-up call.
+  (() => {
+    const $ = (id) => document.getElementById(id);
+    if (!$("d-play")) return;
+    const SCRIPT = [   // start (s), length (s), who, text
+      [0.0, 3.1, "me", "Hej Jesper, tak fordi du ville tage et møde. Har du tyve minutter i dag?"],
+      [4.2, 4.3, "them", "Ja, det har jeg. Vi har meget travlt, så det passer fint med et kort møde."],
+      [9.2, 3.0, "me", "Godt. Fortæl lidt om, hvordan I klarer bogføringen i dag."],
+      [13.6, 6.6, "them", "Min kone gør det om aftenen. Det tager vel ti timer om måneden, og vi kommer altid for sent med momsen."],
+      [21.0, 2.2, "me", "Hvad koster det jer, når momsen kommer for sent?"],
+      [24.2, 1.5, "me", "Altså i bøder og i tid?"],
+      [26.8, 5.0, "them", "Sidste år fik vi to bøder på omkring tre tusinde kroner. Og hun er træt af det."],
+      [32.6, 2.1, "me", "Hvem bestemmer, hvis I skal have hjælp udefra?"],
+      [35.7, 1.4, "me", "Er det dig eller din kone?"],
+      [38.0, 4.0, "them", "Det gør jeg sammen med hende. Vi har snakket om det siden sommeren."],
+      [43.0, 1.3, "me", "Hvad har I prøvet før?"],
+      [47.6, 4.6, "them", "Vi havde en revisor i to år, men han svarede aldrig på mails, så vi stoppede."],
+      [53.0, 5.1, "me", "Det lyder frustrerende. Hvis vi tog bogføringen, hvad skulle der så ske, før det var en succes for jer?"],
+      [59.8, 4.0, "them", "At vi aldrig får en bøde igen, og at hun får sine aftener tilbage."],
+      [64.6, 3.9, "me", "Skal vi sætte næste møde på torsdag klokken ti, hvor jeg viser et konkret forslag?"],
+      [70.0, 3.4, "them", "Ja, torsdag klokken ti passer. Send gerne en invitation."],
+    ].map(([t, d, who, text]) => ({t, d, who, text}));
+    const END = 73.4, PLANNED = 1200;
+    const AI_CUES = [[9.0, "Navngiv: Det lyder som om travlhed fylder meget lige nu."], [20.5, "Hvad koster de ti timer om måneden jer i kroner?"]];
+    const STOP = new Set("hvad hvem hvor hvordan hvornår hvorfor ikke også eller have skal være blive kunne".split(" "));
+    const words = (s) => s.toLowerCase().replace(/[^a-zæøå0-9 ]/g, " ").split(/\s+/)
+      .filter((w) => w.length >= 4 && !STOP.has(w)).map((w) => w.slice(0, 5));
+    const hits = (point, text) => {
+      const p = words(point), t = new Set(words(text));
+      return p.length > 0 && p.filter((w) => t.has(w)).length >= Math.min(2, p.length);
+    };
+    const mmss = (s) => `${Math.floor(Math.abs(s) / 60)}:${String(Math.floor(Math.abs(s) % 60)).padStart(2, "0")}`;
+    const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"}[c]));
+    let t = 0, offset = 0, playing = false, timer = null, band = [30, 45], agenda = [], sticky = null;
+
+    function setAgenda() {
+      agenda = $("d-agin").value.split("\n").map((x) => x.replace(/^\s*(?:[-*•]|\d+[.)])\s*/, "").trim()).filter((x) => x.length >= 3)
+        .slice(0, 8).map((text) => ({text, done: false, by: ""}));
+    }
+    function said() { return SCRIPT.filter((l) => l.t <= t); }
+    function spoken(l) { return Math.max(0, Math.min(l.d, t - l.t)); }
+    function pauses() {
+      const out = [];
+      SCRIPT.forEach((l, i) => {
+        if (l.who !== "me" || !l.text.endsWith("?")) return;
+        const end = l.t + l.d, next = SCRIPT.slice(i + 1).find((n) => n.t >= end - 0.05);
+        if (next && next.t <= t) out.push({who: next.who, pause: next.t - end, at: end});
+      });
+      return out;
+    }
+    function render() {
+      const lines = said();
+      const me = lines.filter((l) => l.who === "me").reduce((a, l) => a + spoken(l), 0);
+      const them = lines.filter((l) => l.who === "them").reduce((a, l) => a + spoken(l), 0);
+      const share = me + them > 0 ? Math.round(100 * me / (me + them)) : null;
+      const clock = t + offset, left = PLANNED - clock;
+      // the agenda: a point is ticked once its words are said and the other side has answered
+      lines.forEach((l, i) => agenda.forEach((a) => {
+        if (a.done || !hits(a.text, l.text)) return;
+        const answer = l.who === "them" ? l : SCRIPT.slice(i + 1).find((n) => n.who === "them" && n.t <= t);
+        if (answer) { a.done = true; a.by = "coachen"; }
+      }));
+      // the cue: the clock first, then the pause, talk share, the coach's own
+      const ps = pauses(), last3 = ps.slice(-3);
+      let cue = null, kind = "";
+      if (left < 0) { cue = `Over tid +${mmss(-left)}: rund af nu`; kind = "crit"; }
+      else if (left <= 300) { cue = `${mmss(left)} tilbage: book næste skridt nu`; kind = "warn"; }
+      else if (last3.length >= 2 && last3.filter((p) => p.who === "me").length >= 2 && last3[last3.length - 1].who === "me") {
+        cue = "Efter dit spørgsmål: vent 3-5 sekunder, og lad dem svare"; kind = "talk";
+      } else if (share != null && t > 30 && share > band[1] + 10) { cue = `Dig: ${share}% de sidste 5 min. Spørg, og vær så stille`; kind = "talk"; }
+      else if (share != null && t > 30 && share < band[0] - 15) { cue = `Dig: ${share}% de sidste 5 min. Tag styringen: opsummér, og før mødet videre`; kind = "talk"; }
+      if (cue) sticky = {text: cue, kind, until: t + 6};
+      const ai = AI_CUES.filter(([at]) => at <= t && t - at < 8).pop();
+      const show = sticky && t < sticky.until ? sticky : ai ? {text: ai[1], kind: "ai"} : null;
+      $("d-cue").className = "dcue " + (show ? show.kind : "calm");
+      $("d-cue").innerHTML = show ? esc(show.text) + (show.kind === "ai" ? ' <span class="dsrc">Coach</span>' : "")
+        : t === 0 ? "Tryk Start, så begynder mødet." : "På sporet. Bliv ved med at lytte.";
+      $("d-clock").textContent = `${mmss(clock)} / 20:00`;
+      $("d-clock").className = "dclock" + (left < 0 ? " crit" : left <= 300 ? " warn" : "");
+      $("d-share").textContent = share == null ? "--%" : `${share}%`;
+      $("d-share").className = share == null ? "ok" : share > band[1] ? "crit" : share < band[0] ? "warn" : "ok";
+      $("d-split").textContent = `dig ${mmss(me)} · dem ${mmss(them)}`;
+      $("d-fill").style.width = `${share ?? 0}%`;
+      $("d-band").style.left = `${band[0]}%`;
+      $("d-band").style.width = `${band[1] - band[0]}%`;
+      const answered = ps.filter((p) => p.who === "them");
+      const med = answered.map((p) => p.pause).sort((a, b) => a - b)[Math.floor((answered.length - 1) / 2)];
+      $("d-pause").textContent = ps.length ? `Pause efter dine spørgsmål: ${answered.length} af ${ps.length} fik lov at svare`
+        + (answered.length ? `, typisk efter ${med.toFixed(1).replace(".", ",")} sek.` : "") : "";
+      $("d-mb").textContent = left < 0 ? `● +${mmss(-left)}` : share == null ? "Coach" : left <= 600 ? `● ${share}% · ${mmss(left)}` : `● ${share}%`;
+      $("d-mb").className = "dpill" + (left < 0 ? " crit" : left <= 300 ? " warn" : "");
+      $("d-agenda").innerHTML = agenda.map((a, i) => `<li class="${a.done ? "done" : ""}"><label><input type="checkbox" data-i="${i}" ${a.done ? "checked" : ""}>
+        <span>${esc(a.text)}</span></label>${a.done ? `<small>afkrydset af ${a.by}</small>` : ""}</li>`).join("") || '<li class="dsub">Sæt din dagsorden ind til højre.</li>';
+      $("d-lines").innerHTML = lines.slice(-3).map((l) => `<div><b>${mmss(l.t)} ${l.who === "me" ? "Dig" : "Jesper"}:</b> ${esc(l.text)}</div>`).join("")
+        || '<span class="dsub">Lytter...</span>';
+      const done = t >= END + 1.5;
+      $("d-result").hidden = !done;
+      if (done) $("d-resnum").textContent = `Du talte ${share}% (mål ${band[0]}-${band[1]}%) · ${answered.length} af ${ps.length} spørgsmål fik lov at blive besvaret · ${agenda.filter((a) => a.done).length}/${agenda.length} på dagsordenen`;
+      $("d-play").textContent = done ? "Se det igen" : playing ? "Pause" : t > 0 ? "Fortsæt" : "Start mødet";
+    }
+    function stop() { playing = false; clearInterval(timer); render(); }
+    function play() {
+      if (t >= END + 1.5) restart();
+      playing = true;
+      clearInterval(timer);
+      timer = setInterval(() => { t = Math.min(END + 1.5, t + 0.1); if (t >= END + 1.5) stop(); else render(); }, 100);
+      render();
+    }
+    function restart() { t = 0; offset = 0; sticky = null; setAgenda(); render(); }
+    $("d-play").onclick = () => (playing ? stop() : play());
+    $("d-restart").onclick = () => { stop(); restart(); };
+    $("d-kind").onchange = (e) => { band = e.target.value.split(",").map(Number); render(); };
+    $("d-near").onclick = () => { offset = PLANNED - 300 - t; if (!playing) play(); };
+    $("d-over").onclick = () => { offset = PLANNED + 90 - t; if (!playing) play(); };
+    $("d-use").onclick = () => { setAgenda(); render(); };
+    $("d-agenda").onchange = (e) => {
+      const a = agenda[Number(e.target.dataset.i)];
+      if (a) { a.done = e.target.checked; a.by = "dig"; render(); }
+    };
+    $("d-copy").onclick = async () => {
+      const text = [`# Intro: Byg & Bad (demo)`, `## Min dagsorden\n${agenda.map((a) => `- [${a.done ? "x" : " "}] ${a.text}`).join("\n")}`,
+        $("d-notes").value.trim() ? `## Mine noter\n${$("d-notes").value.trim()}` : "",
+        `## Transskription\n${said().map((l) => `[${mmss(l.t)}] ${l.who === "me" ? "Anna" : "Jesper"}: ${l.text}`).join("\n")}`].filter(Boolean).join("\n\n");
+      try { await navigator.clipboard.writeText(text); $("d-copy").textContent = "Kopieret. Sæt det ind med ⌘V"; }
+      catch (e) { $("d-copy").textContent = "Kunne ikke kopiere her"; }
+      setTimeout(() => { $("d-copy").textContent = "Kopiér alt til en AI-chat"; }, 3000);
+    };
+    restart();
+  })();
+
+  // versionen og "Versioner" kommer fra docs/changelog.json, som hver udgivelse skriver
   fetch("changelog.json", {cache: "no-store"}).then((r) => r.json()).then((versions) => {
     if (!versions.length) return;
     const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"}[c]));

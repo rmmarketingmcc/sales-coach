@@ -34,7 +34,7 @@ It asks four questions (name, company, what you sell, language), downloads the s
 macOS asks once for the Microphone, the call audio and your Calendar. Run the same line again to update; add
 `-s -- --uninstall` after `bash` to remove it.
 
-Made by [RM Marketing](https://rm-marketing.dk).
+Made by [RM Marketing](https://rm-marketing.dk). Open source under the MIT licence: use it, change it, make it your own.
 
 ## Privacy
 

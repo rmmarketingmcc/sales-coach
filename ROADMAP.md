@@ -36,6 +36,11 @@ here, and each user's own data through add-ons, so every improvement reaches eve
       "Allow JavaScript from Apple Events" once), with the copy button for Zoom, Teams and the rest
 - [x] Your own agenda: pasted in the window (during the call, or saved for the next meeting) or read from a list in
       the invite; ticked off by the coach from what is said, Danish or English, or by you; without AI a plain checklist
+- [x] The pause after your questions (talk meter frames), with a nudge when you answer them yourself; a nudge for talking too little
+- [x] 13 meeting types for more than sales (negotiation, job interview, one-on-one, advice session, support, presentation) plus your own
+- [x] "Dine noter" during and after a call, and "Kopiér alt til en AI-chat" (agenda, notes, result, transcript)
+- [x] Tell the coach what you want to get better at (presets or your own words), used in cues, the result and Bliv bedre
+- [x] The page: an interactive demo, the GDPR rules, open source (MIT) you improve yourself
 - [x] One language for users: the page, installer, window, menus and permission texts in Danish
 - [x] The page follows the app: version and "What's new" from each release (`docs/changelog.json`), pictures retaken
       from the made-up call with `tests/page_shots.py`
