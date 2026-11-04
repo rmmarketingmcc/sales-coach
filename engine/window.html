@@ -1,0 +1,978 @@
+<!doctype html>
+<html lang="da">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sales Coach</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap">
+<style>
+  /* RM brand (reference_rm_brand_guide): light ground, white cards, Navy ink, Lime as the one accent.
+     Semantic ok/warn/crit are status colors, not accents. Window is ~460 px wide next to the call. */
+  :root {
+    --ground: #F5F6FA; --card: #FFFFFF; --ink: #192230; --muted: #3E4B63; --faint: #55637E; --line: #D9E0EA;
+    --brand: #84CE18; --brand-ink: #4d7d0d; --brand-soft: rgba(132, 206, 24, .22);
+    --ok: #27AE60; --warn: #E67E22; --warn-ink: #A34A0B; --warn-soft: #FDF1E6; --crit: #C0392B; --track: #EEF1F6;
+    --font: "Poppins", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    color-scheme: light;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--ground); color: var(--ink); font: 14px/1.45 var(--font); }
+  .cc { padding: 12px 14px 16px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
+  .cc section { background: var(--card); border: 1px solid #E3E8F0; border-radius: 12px; padding: 11px 13px; min-width: 0;
+    overflow-wrap: anywhere; box-shadow: 0 1px 2px rgba(25, 34, 48, .05); }
+  .cc h2 { margin: 0 0 7px; font-size: 13.5px; font-weight: 600; color: var(--ink); display: flex; align-items: center; gap: 6px; }
+  .cc .avatar { width: 20px; height: 20px; border-radius: 50%; object-fit: cover; }
+  .cc .avatar.ini { display: inline-flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 700;
+    background: var(--brand-soft); color: var(--brand-ink); }
+  .cc .top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; min-width: 0; }
+  .cc .row > span { min-width: 0; }
+  .cc .row select { max-width: 100%; }
+  .cc .title { font-weight: 600; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  .cc .clock { font-variant-numeric: tabular-nums; font-size: 18px; font-weight: 700; white-space: nowrap; }
+  .cc .clock.warn { color: var(--warn); } .cc .clock.crit { color: var(--crit); }
+  .cc .row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 6px; color: var(--faint); font-size: 12px; }
+  .cc select { font: inherit; font-size: 12px; background: var(--card); color: var(--ink); border: 1px solid var(--line); border-radius: 6px; padding: 3px 6px; }
+  .cc select:focus-visible { outline: 2px solid var(--brand); outline-offset: 1px; }
+  .cc .share { display: flex; align-items: baseline; gap: 12px; }
+  .cc .big { font-size: 40px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1; white-space: nowrap; }
+  .cc .share .avatar { align-self: center; flex: none; }
+  .cc .share .sub { min-width: 0; }
+  .cc .big.ok { color: var(--ok); } .cc .big.warn { color: var(--warn); } .cc .big.crit { color: var(--crit); }
+  .cc .sub { color: var(--faint); font-size: 12px; font-variant-numeric: tabular-nums; }
+  .cc .bar { position: relative; height: 12px; border-radius: 6px; background: var(--track); margin-top: 10px; overflow: hidden; }
+  .cc .bar .band { position: absolute; top: 0; bottom: 0; background: var(--brand-soft); border-left: 2px solid var(--brand); border-right: 2px solid var(--brand); }
+  .cc .bar .fill { position: absolute; top: 3px; bottom: 3px; left: 0; border-radius: 3px; background: var(--ink); transition: width .4s; }
+  .cc .bar .fill5 { position: absolute; top: 0; bottom: 0; width: 3px; background: var(--brand-ink); transition: left .4s; }
+  .cc .stretch { margin-top: 8px; font-weight: 600; color: var(--warn); }
+  .cc .cues { display: grid; gap: 8px; }
+  .cc .cue { font-size: 16px; font-weight: 600; line-height: 1.35; padding: 8px 10px; border-radius: 8px; background: var(--ground); border-left: 4px solid var(--brand); }
+  .cc .cue.talk { border-color: var(--warn); } .cc .cue.time { border-color: var(--crit); }
+  .cc .empty { color: var(--faint); font-size: 13px; }
+  .cc ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+  .cc li { display: grid; grid-template-columns: 16px minmax(0, 1fr); gap: 8px; align-items: start; }
+  .cc .dot { width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--line); margin-top: 4px; }
+  .cc .dot.partly { border-color: var(--warn); background: linear-gradient(90deg, var(--warn) 50%, transparent 50%); }
+  .cc .dot.covered { border-color: var(--brand); background: var(--brand); }
+  .cc li.covered .lbl { color: var(--faint); text-decoration: line-through; }
+  .cc .lbl { font-weight: 600; font-size: 13px; }
+  .cc .say { color: var(--muted); font-size: 12px; }
+  .cc .agenda li { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; color: var(--faint); }
+  .cc .agenda li.now { color: var(--ink); font-weight: 600; }
+  .cc .here { color: var(--brand-ink); font-weight: 600; }
+  .cc .lines { font-size: 12px; display: grid; gap: 4px; color: var(--muted); margin-top: 6px; }
+  .cc .lines b { color: var(--ink); font-weight: 600; }
+  .cc details summary { cursor: pointer; font-size: 13px; font-weight: 600; color: var(--faint); }
+  .cc footer { color: var(--faint); font-size: 11px; display: grid; gap: 2px; }
+  .cc .idle { text-align: center; padding: 40px 10px; color: var(--faint); }
+  .cc .live { color: var(--faint); font-style: italic; }
+  .cc .links, .mini .m-links { display: flex; flex-wrap: wrap; gap: 6px; font-size: 12px; }
+  .cc .chip { display: inline-flex; align-items: center; gap: 5px; padding: 5px 11px; border-radius: 999px; border: 1px solid #DCE3EC;
+    background: var(--card); color: var(--ink) !important; font-weight: 600; font-size: 12px; text-decoration: none; white-space: nowrap;
+    box-shadow: 0 1px 1px rgba(25, 34, 48, .04); }
+  .cc .chip svg { width: 14px; height: 14px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .cc .chip:hover { border-color: var(--brand); }
+  .cc .chip.primary { background: var(--brand); border-color: var(--brand); }
+  .cc .chip.primary:hover { border-color: var(--brand-ink); }
+  .cc .chip:focus-visible { outline: 2px solid var(--brand); outline-offset: 1px; }
+  .cc .tag { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; }
+  .cc .tag.client { background: var(--brand); color: var(--ink); }
+  .cc .tag.lead { background: var(--ground); border: 1px solid var(--line); color: var(--muted); }
+  .cc .cue .src, .cc .debrief .src { display: inline-block; margin-left: 8px; font-size: 11px; font-weight: 600; color: var(--brand-ink); }
+  .cc .next { display: grid; gap: 4px; margin-top: 8px; }
+  .cc .next .nx { font-size: 13.5px; font-weight: 600; color: var(--ink); background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 5px 8px; }
+  .cc .next .nx.partly { border-color: var(--warn); }
+  /* a partly answered question says so, and names the gap (Rasmus 4 Nov: "answered in part, but it
+     doesn't say so, or what we still need to dig into") */
+  .cc .dl { display: inline-block; padding: 0 7px; border-radius: 999px; background: var(--warn-soft); color: var(--warn-ink);
+    border: 1px solid var(--warn); font-size: 10.5px; font-weight: 700; line-height: 16px; vertical-align: 1px; margin-right: 4px; white-space: nowrap; }
+  .cc .miss { color: var(--warn-ink); font-size: 12.5px; font-weight: 600; margin-top: 1px; }
+  .cc .got { color: var(--faint); font-size: 12px; }
+  .cc .debrief { display: grid; gap: 6px; }
+  .cc .moments { display: grid; gap: 8px; margin: 0; padding-left: 0; list-style: none; }
+  .cc .moments li { display: block; font-size: 13px; color: var(--muted); border-left: 3px solid var(--brand); padding-left: 8px; }
+  .cc .moments .better { color: var(--ink); margin-top: 2px; }
+  .cc .moments li { color: var(--ink); }
+  .cc .moments.why li { color: var(--muted); border-left-color: var(--line); }
+  .cc .debrief details summary { margin-top: 4px; }
+  .cc .std { display: grid; gap: 3px; margin-top: 4px; }
+  /* the question names are one fixed column, always whole (Rasmus 4 Nov: "lock them so they can always be
+     read; the text after them is what changes when I make it wide or small"); "Annoncebudget" is the longest */
+  .cc .sq { display: grid; grid-template-columns: 12px 106px minmax(0, 1fr); gap: 6px; align-items: baseline; font-size: 12.5px; }
+  .cc .sq .k { color: var(--faint); font-weight: 600; white-space: nowrap; }
+  /* too narrow for name and answer side by side: the name above its answer, both whole */
+  @media (max-width: 339px) {
+    .cc .sq { grid-template-columns: 12px minmax(0, 1fr); row-gap: 0; }
+    .cc .sq .v { grid-column: 2; }
+  }
+  .cc .sq .v { color: var(--ink); }
+  .cc .sq .dot2 { width: 9px; height: 9px; border-radius: 50%; border: 2px solid var(--line); align-self: start; margin-top: 5px; }
+  .cc .sq.now .dot2 { background: var(--brand); border-color: var(--brand); }
+  .cc .sq.vague .dot2 { border-color: var(--warn); background: linear-gradient(90deg, var(--warn) 50%, transparent 50%); }
+  .cc .sq.before .dot2 { background: var(--line); border-color: var(--line); }
+  .cc .sq.before .v { color: var(--muted); }
+  .cc .sq.missing .v { color: var(--faint); font-style: italic; }
+  .cc .sq.est .dot2 { border-color: var(--brand-ink); border-style: dashed; }
+  .cc .sq.est .v { color: var(--muted); }
+  .cc .book { display: grid; gap: 4px; margin-top: 8px; padding: 8px 10px; border: 1px solid var(--brand); border-radius: 8px; background: var(--brand-soft); }
+  .cc .book.done { font-weight: 600; }
+  .cc .book .clash { color: var(--crit); font-size: 12px; font-weight: 600; }
+  .cc .lbar { position: sticky; bottom: 0; display: flex; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; gap: 6px; padding: 8px 2px 4px; background: var(--ground); border-top: 1px solid var(--line); margin-top: 4px; }
+  .cc .lbar::-webkit-scrollbar { display: none; }
+  .cc .lbar .chip { flex: none; }
+  /* one row of buttons; a fade at the right edge says there are more to swipe to */
+  .cc .lbar.more { -webkit-mask-image: linear-gradient(90deg, #000 82%, transparent); mask-image: linear-gradient(90deg, #000 82%, transparent); }
+  .cc .links a, .cc .brief a { color: var(--brand-ink); font-weight: 600; text-decoration: none; }
+  .cc .brief { display: grid; gap: 4px; margin-top: 6px; font-size: 13px; }
+  .cc .bh { font-weight: 600; font-size: 12px; color: var(--faint); margin-top: 4px; }
+  .cc .bl { display: grid; gap: 2px; margin: 0; padding-left: 18px; list-style: disc; }
+  .cc .bl li { display: list-item; font-size: 13px; color: var(--muted); }
+  .cc .fb { display: grid; gap: 8px; }
+  .cc .fb textarea { font: inherit; font-size: 13px; border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; resize: vertical; width: 100%; }
+  .cc .fb textarea:focus-visible { outline: 2px solid var(--brand); outline-offset: 1px; }
+  .cc .fb .rate, .cc .fb .save { font: 600 12px var(--font); border-radius: 6px; padding: 5px 10px; cursor: pointer; background: var(--card); color: var(--ink); border: 1px solid var(--line); }
+  .cc .fb .rate.on { background: var(--brand-soft); border-color: var(--brand); }
+  .cc .fb .save { justify-self: start; background: var(--brand); border: 0; }
+  .mini .links a { color: var(--brand-ink); font-weight: 600; text-decoration: none; }
+  .mini .m-brief { font-size: 12.5px; color: var(--muted); background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; }
+  .mini .fb h2 { font-size: 12px; margin: 0; }
+  .mini .fb { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 8px; }
+  .mini { display: grid; grid-template-columns: minmax(0, 1fr); gap: 7px; padding: 10px 12px; font-size: 13px; }
+  .mini > * { min-width: 0; }
+  .mini .m-top > span:first-child { flex: none; white-space: nowrap; }
+  /* the buttons stay one row in the small window: swipe sideways for the rest */
+  .mini .lbar { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; padding-top: 6px; }
+  .mini .lbar::-webkit-scrollbar { display: none; }
+  .mini .lbar .chip { flex: none; }
+  .mini .next .nx, .mini .cue { overflow-wrap: anywhere; }
+  .mini .m-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .mini .clock { font-size: 15px; }
+  .mini .m-type { color: var(--faint); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  .mini .m-talk { display: flex; align-items: center; gap: 8px; }
+  .mini .m-pct { font-size: 28px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
+  .mini .m-pct.ok { color: var(--ok); } .mini .m-pct.warn { color: var(--warn); } .mini .m-pct.crit { color: var(--crit); }
+  .mini .m-bar { flex: 1; margin-top: 0; }
+  .mini .cue { font-size: 14px; padding: 6px 8px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .mini .m-items { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+  .mini .m-items .dot { margin-top: 0; }
+  .mini .m-items .sub { margin-left: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 1; }
+  .mini .m-live { font-size: 12px; color: var(--muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .mini .m-live.live { color: var(--faint); font-style: italic; }
+  .mini .m-power { justify-self: end; font: 600 11px var(--font); background: var(--card); color: var(--ink); border: 1px solid var(--line); border-radius: 6px; padding: 3px 8px; cursor: pointer; }
+  .cc .controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 12px; color: var(--faint); }
+  .cc .controls button { font: 600 12px var(--font); border-radius: 6px; padding: 5px 10px; cursor: pointer; margin-left: auto; }
+  .cc .controls button.off { background: var(--card); color: var(--ink); border: 1px solid var(--line); }
+  .cc .controls button.on { background: var(--brand); color: var(--ink); border: 0; }
+  .cc .controls button:focus-visible { outline: 2px solid var(--brand); outline-offset: 1px; }
+  .cc .notes h2 { margin-top: 10px; color: var(--ink); }
+  .cc .notes p { margin: 0 0 6px; font-size: 13px; }
+  .cc .notes-list { display: grid; gap: 4px; margin-bottom: 6px; }
+  .cc .notes-list li.nb { display: list-item; list-style: disc; margin-left: 18px; font-size: 13px; }
+  .cc .idle .big { color: var(--ink); margin: 10px 0; }
+  /* the smallest window: tighter, so the top cue still fits under the talk share */
+  @media (max-height: 170px) {
+    .mini { padding: 6px 10px; gap: 5px; }
+    .mini .m-pct { font-size: 22px; }
+    .mini .avatar { display: none; }
+    .mini .cue { font-size: 12.5px; padding: 4px 7px; -webkit-line-clamp: 2; }
+    .mini .next .nx { font-size: 12.5px; padding: 3px 6px; }
+  }
+  /* the Sales rep's check of the coming calls (from an add-on) */
+  .cc .rds { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+  .cc .rd { font-size: 11.5px; font-weight: 600; padding: 1px 7px; border-radius: 999px; border: 1px solid var(--line);
+    color: var(--muted); background: var(--card); text-decoration: none; white-space: nowrap; }
+  .cc .rd.ok { border-color: var(--brand); color: var(--brand-ink); }
+  .cc .rd.warn { border-color: var(--warn); color: #9A4A0C; }
+  .cc .rd.missing { border-color: var(--crit); color: var(--crit); }
+  /* the views between calls: Overblik and Opkald (every call, and one call's result) */
+  .cc .band { display: flex; align-items: center; justify-content: space-between; gap: 8px; background: var(--ink); color: #fff;
+    border-radius: 12px; padding: 6px 6px 6px 12px; min-width: 0; }
+  .cc .band .name { font-weight: 700; font-size: 13px; white-space: nowrap; display: flex; align-items: center; gap: 7px; min-width: 0; }
+  .cc .band .name span { overflow: hidden; text-overflow: ellipsis; }
+  .cc .tabs { flex: none; }
+  .cc .band .name::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--brand); }
+  .cc .tabs { display: flex; gap: 2px; }
+  .cc .tabs button { font: 600 12px var(--font); padding: 4px 11px; border-radius: 999px; border: 0;
+    background: transparent; color: #C9D2E0; cursor: pointer; }
+  .cc .tabs button.on { background: #fff; color: var(--ink); }
+  /* the narrowest window: name and both tabs were 14 px too wide (seen 4 Nov at 270 px) */
+  @media (max-width: 300px) { .cc .band { padding-left: 10px; gap: 4px; } .cc .band .name { font-size: 12px; gap: 5px; }
+    .cc .tabs button { padding: 4px 8px; } }
+  .cc .tabs button:focus-visible, .cc .calls li:focus-visible { outline: 2px solid var(--brand); outline-offset: 1px; }
+  .cc .calls { display: grid; gap: 6px; }
+  .cc .calls li { display: block; background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; cursor: pointer; }
+  .cc .calls li:hover { border-color: var(--brand); }
+  .cc .c1 { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+  .cc .cdate { font-size: 12px; color: var(--faint); font-weight: 600; }
+  .cc .cpct { font-weight: 700; font-variant-numeric: tabular-nums; }
+  .cc .cpct.ok { color: var(--ok); } .cc .cpct.warn { color: var(--warn); } .cc .cpct.crit { color: var(--crit); }
+  .cc .ctitle { font-weight: 600; font-size: 13px; }
+  .cc .backb { font: 600 12px var(--font); background: none; border: 0; color: var(--brand-ink); cursor: pointer; padding: 2px 0; justify-self: start; }
+  /* the meeting's countdown: to the calendar end, then the next meeting (Rasmus 4 Nov: "my meetings run over
+     and the next one starts late; I need a countdown I can see") */
+  .cc .cd { display: grid; gap: 5px; padding: 8px 11px; border-radius: 12px; background: var(--card); border: 1px solid #E3E8F0; }
+  .cc .cd-row { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+  .cc .cd-left { font-size: 28px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1; color: var(--ink); }
+  .mini .cd-left { font-size: 22px; }
+  .cc .cd-lbl { font-size: 12.5px; color: var(--faint); font-weight: 600; }
+  .cc .cd-bar { height: 6px; border-radius: 3px; background: var(--track); overflow: hidden; }
+  .cc .cd-bar div { height: 100%; background: var(--brand); }
+  .cc .cd-sub { font-size: 12px; color: var(--muted); }
+  .cc .cd.warn { border-color: var(--warn); }
+  .cc .cd.warn .cd-left { color: #B85F12; } .cc .cd.warn .cd-bar div { background: var(--warn); }
+  .cc .cd.crit { border-color: var(--crit); background: #FDECEA; }
+  .cc .cd.crit .cd-left, .cc .cd.crit .cd-lbl { color: var(--crit); }
+  .cc .cd-now { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; padding: 8px 11px; border-radius: 12px;
+    background: var(--crit); color: #fff; font-size: 13px; }
+  .cc .cd-now .chip { color: var(--ink) !important; }
+  .cc .pulse { animation: pulse .9s ease-in-out infinite alternate; }
+  @keyframes pulse { from { opacity: 1; } to { opacity: .6; } }
+  @media (prefers-reduced-motion: reduce) { .cc .pulse { animation: none; } }
+  /* between calls: the countdown to the next meeting, and when its Meet opens (Rasmus 4 Nov: "a countdown
+     to my next meeting on my screen, and the meeting opened in Meet two minutes before") */
+  #upnext:empty { display: none; }
+  .cc .up { grid-template-columns: minmax(0, 1fr); }   /* a long title is cut, never widens the window */
+  .cc .up .up-row { display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .cc .up .chip { flex: none; }
+  .cc .up .cd-title { flex: 1; font-weight: 600; font-size: 13px; line-height: 1.3; min-width: 0; overflow: hidden;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+  .cc .up .cd-lbl { white-space: nowrap; }
+  .cc .jn { display: inline-flex; align-items: center; gap: 5px; cursor: pointer; }
+  /* "Bliv bedre": the week's three goals and the coach's read on him (Rasmus 4 Nov) */
+  .cc .gl { display: grid; gap: 4px; padding: 8px 0 2px; border-top: 1px solid #EDF1F6; }
+  .cc .gl:first-of-type { border-top: 0; padding-top: 2px; }
+  .cc .gl-h { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 8px; align-items: baseline; font-size: 13px; }
+  .cc .gl-n { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .cc .gl-n.ok { color: var(--brand-ink); } .cc .gl-n.bad { color: var(--warn-ink); }
+  .cc .gl-bar { position: relative; height: 8px; border-radius: 4px; background: var(--track); }
+  .cc .gl-bar > div { height: 100%; border-radius: 4px; background: var(--brand); }
+  .cc .gl-bar.bad > div { background: var(--warn); }
+  .cc .gl-t { position: absolute; top: -3px; bottom: -3px; width: 2px; border-radius: 1px; background: var(--ink); }
+  /* the charts (Rasmus 4 Nov: "more visual, charts, so I quickly see whether it gets better or worse"): this
+     week's meetings as dots, the weeks as bars against the target line; green made it, orange did not */
+  .cc .gl-dots { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; min-height: 12px; }
+  .cc .gl-dots i { width: 12px; height: 12px; border-radius: 50%; background: var(--brand); }
+  .cc .gl-dots i.bad { background: var(--warn); }
+  .cc .gl-dots .sub { margin-left: 4px; }
+  .cc .trend { font-size: 12px; font-weight: 600; white-space: nowrap; }
+  .cc .trend.up { color: var(--brand-ink); } .cc .trend.down { color: var(--warn-ink); } .cc .trend.flat { color: var(--faint); }
+  .cc .wchart { display: block; width: 100%; height: auto; margin-top: 2px; overflow: visible; }
+  .cc .wchart .b-ok { fill: var(--brand); } .cc .wchart .b-bad { fill: var(--warn); }
+  .cc .wchart .old { opacity: .5; }
+  .cc .wchart .tl { stroke: var(--ink); stroke-width: 1; stroke-dasharray: 3 3; }
+  .cc .wchart .base { stroke: var(--line); stroke-width: 1; }
+  .cc .wchart text { font: 600 10.5px var(--font); fill: var(--muted); text-anchor: middle;
+    paint-order: stroke; stroke: var(--card); stroke-width: 3px; stroke-linejoin: round; }   /* readable over the target line */
+  .cc .wchart text.wl { font-weight: 400; fill: var(--faint); }
+  .cc .wchart text.tlb { text-anchor: end; font-weight: 600; fill: var(--ink); }
+  .cc .tip { display: grid; gap: 2px; padding: 8px 0 2px; border-top: 1px solid #EDF1F6; font-size: 13px; }
+  .cc .tip .how { color: var(--ink); } .cc .ex { color: var(--faint); font-size: 12px; }
+  .cc .jn input { accent-color: var(--brand-ink); margin: 0; }
+  .cc .todo-box { border-left: 4px solid var(--crit); }
+  .cc .todo-box li { display: list-item; font-size: 13px; color: var(--ink); }
+  .cc .ctype { font-size: 11px; font-weight: 600; color: var(--faint); }
+  .cc .up { display: grid; gap: 8px; }
+  .cc .up li { display: block; }
+  .cc .up .lbl { font-size: 12.5px; }
+  @media (prefers-reduced-motion: reduce) { .cc .bar .fill, .cc .bar .fill5 { transition: none; } }
+</style>
+</head>
+<body>
+<main class="cc" id="app"><div class="idle">Starter...</div></main>
+<script>
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"}[c]));
+const mmss = (s) => s == null ? "" : `${Math.floor(Math.max(0, s) / 60)}:${String(Math.floor(Math.max(0, s) % 60)).padStart(2, "0")}`;
+const avatar = (st) => `<span class="avatar ini">${esc((st.me && st.me.initials) || "")}</span>`;
+let openDetails = true;
+
+function shareClass(share, target) {
+  if (share == null || !target) return "";
+  if (share <= target[1]) return "ok";
+  return share <= target[1] + 10 ? "warn" : "crit";
+}
+
+const HEAD_DA = {"Summary": "Resumé", "Next steps": "Næste skridt", "Decisions and numbers": "Beslutninger og tal",
+  "Transcript": "Transskription"};
+function md(text) {
+  // the notes are callrec_process's three sections: "## Heading", "- bullet" and plain sentences
+  let out = "", inList = false;
+  for (const raw of String(text || "").split("\n")) {
+    const line = raw.trim();
+    const bullet = line.startsWith("- ");
+    if (inList && !bullet) { out += "</ul>"; inList = false; }
+    if (!line) continue;
+    if (line.startsWith("## ")) out += `<h2>${esc(HEAD_DA[line.slice(3)] || line.slice(3))}</h2>`;
+    else if (bullet) { if (!inList) { out += `<ul class="notes-list">`; inList = true; } out += `<li class="nb">${esc(line.slice(2))}</li>`; }
+    else out += `<p>${esc(line)}</p>`;
+  }
+  return out + (inList ? "</ul>" : "");
+}
+
+// ---- the brief at call start, links, and the feedback box after a call
+let briefOpen = null, fbRating = null, fbDraft = "";
+
+// The buttons (website, Google Ads, report, CRO review, PA, talepapir, mail) in a bar fixed to the bottom
+// of the window (Rasmus 4 Nov: "buttons down at the bottom of the widget").
+// on the call you are in the meeting already: no "Deltag i mødet" there
+const liveLinks = (st) => (st.links || []).filter((l) => l.kind !== "meet");
+const minsLeft = (sec) => sec >= 60 ? `${Math.round(sec / 60)} min` : `${Math.max(0, sec)} sek.`;
+function countdown(st) {
+  const cd = st.countdown;
+  if (!cd || cd.left_s == null) return "";
+  const left = cd.left_s, over = left < 0, n = cd.next;
+  const cls = over ? "crit" : left <= 300 ? "warn" : "";
+  const pct = cd.total_s ? Math.max(0, Math.min(100, 100 * left / cd.total_s)) : null;
+  const soon = n && n.in_s <= 300;
+  const nextLine = n && !soon ? `<div class="cd-sub">Næste: ${esc(n.title)} · ${esc(clock(n.start))} · om ${minsLeft(n.in_s)}</div>` : "";
+  const banner = soon ? `<div class="cd-now${n.in_s <= 60 ? " pulse" : ""}"><b>${n.in_s > 0 ? `Næste opkald om ${mmss(n.in_s)}` : `Næste opkald startede for ${mmss(-n.in_s)} siden`}</b>
+      <span>${esc(n.title)}</span>${n.meet ? `<a class="chip primary" href="${esc(n.meet)}" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true">${ICONS.meet}</svg>Deltag</a>` : ""}</div>` : "";
+  return `<div class="cd ${cls}"><div class="cd-row"><span class="cd-left">${over ? "+" : ""}${mmss(Math.abs(left))}</span>
+      <span class="cd-lbl">${over ? "over tid" : cd.to === "next" ? "til næste opkald" : "tilbage"}</span></div>
+    ${pct != null ? `<div class="cd-bar"><div style="width:${pct}%"></div></div>` : ""}${nextLine}</div>${banner}`;
+}
+// Between calls, from 15 min before: the countdown to the next meeting, its time in both zones, a button
+// into its Meet, and when Meet opens by itself (2 min before; the service does it, see join_tick)
+function upNext(st) {
+  const u = st.upcoming;
+  if (!u || u.in_s > 900 || (st.settings && st.settings.enabled === false)) return "";
+  const started = u.in_s <= 0, auto = !st.settings || st.settings.auto_join !== false;
+  const cls = started || u.in_s <= 120 ? "crit" : u.in_s <= 300 ? "warn" : "";
+  const join = !u.meet || !auto ? "" : u.opened ? "Meet er åbnet i browseren: tryk Deltag nu i Meet"
+    : started ? "Meet åbner, så snart du er ved Mac'en"
+    : `Mødet åbner selv ${clock(u.join_at)}`;
+  return `<div class="cd up ${cls}${u.in_s <= 60 && u.in_s > -600 && !u.opened ? " pulse" : ""}">
+    <div class="cd-row"><span class="cd-left">${mmss(Math.abs(u.in_s))}</span>
+      <span class="cd-lbl">${started ? "siden mødet startede" : "til næste møde"}</span></div>
+    <div class="up-row"><span class="cd-title" title="${esc(u.title)}">${esc(u.title)}</span>
+      ${u.meet ? `<a class="chip primary" href="${esc(u.meet)}" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true">${ICONS.meet}</svg>Deltag</a>` : ""}</div>
+    <div class="cd-sub">${callTime(u)}${u.type_label ? ` · ${esc(u.type_label)}` : ""}</div>
+    ${join ? `<div class="cd-sub">${join}</div>` : ""}</div>`;
+}
+function fillUpNext(st) {
+  const el = $("#upnext");
+  if (!el) return;
+  const html = upNext(st);
+  if (el.dataset.h !== html) { el.dataset.h = html; el.innerHTML = html; }
+}
+function linksBar(ls, p) {
+  return (ls || []).length ? `<div class="lbar"${p ? ` data-p="${p}"` : ""}>${links({links: ls})}</div>` : "";
+}
+
+// one plain stroke icon per kind of button, so they are found without reading (Rasmus 4 Nov: "make the
+// buttons even better")
+const ICONS = {
+  meet: '<rect x="2" y="6" width="13" height="12" rx="2"/><path d="M15 10l7-4v12l-7-4"/>',
+  site: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3.5 3 14.5 0 18M12 3c-3 3.5-3 14.5 0 18"/>',
+  ads: '<path d="M4 20V11M10 20V5M16 20v-6M2 20h20"/>',
+  report: '<path d="M7 3h8l4 4v14H7z"/><path d="M10 17v-3M13 17v-6M16 17v-4"/>',
+  cro: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M9 9v11"/>',
+  doc: '<path d="M7 3h8l4 4v14H7z"/><path d="M15 3v4h4M10 12h6M10 16h6"/>',
+  note: '<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/>',
+  mail: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/>',
+  text: '<path d="M4 6h16M4 10h16M4 14h12M4 18h8"/>',
+};
+function linkKind(l) {
+  const t = (l.label || "").toLowerCase();
+  return l.kind === "meet" ? "meet" : t.startsWith("hjemmeside") ? "site" : t.startsWith("google ads") ? "ads"
+    : t.startsWith("rapport") ? "report" : t.startsWith("cro") ? "cro" : t.startsWith("talepapir") ? "note"
+    : t.startsWith("mail") ? "mail" : t.startsWith("transskription") ? "text" : "doc";
+}
+function links(st) {
+  return (st.links || []).map((l) => {
+    const k = linkKind(l);
+    return `<a class="chip${k === "meet" ? " primary" : ""}" href="${esc(l.url)}" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true">${ICONS[k]}</svg>${esc(l.label)}</a>`;
+  }).join("");
+}
+
+// Client or lead: a label next to the call type, so it is clear which buttons you are looking at
+const STAGE_DA = {qualifying: "kvalificeres", ltv_submitted: "tal indsendt", call_booked: "møde booket",
+  access_granted: "adgang givet", audit_done: "analyse leveret", offer_sent: "tilbud sendt", verbal_yes: "mundtligt ja",
+  signed: "underskrevet", won: "vundet", nurture: "pleje", paused: "pause", lost: "tabt"};
+function modeTag(st) {
+  if (st.mode === "client") return `<span class="tag client">Kunde</span>`;
+  if (st.mode === "lead") return `<span class="tag lead">Lead${st.stage ? ` · ${esc(STAGE_DA[st.stage] || st.stage.replace(/_/g, " "))}` : ""}</span>`;
+  return "";
+}
+
+// The next two open questions, as the line to say: fixed until one is answered, so it can be read
+// (Rasmus 2026-11-04: "always show the next 2, so it doesn't vanish while I read it")
+function nextAsk(st) {
+  const n = (st.next_items || []).slice(0, 2);
+  if (!n.length) return "";
+  // an open question shows the line to ask; a partly answered one says "Delvist" and what is missing
+  return `<div class="next"><div class="bh" data-p="4.5">Spørg nu</div>${n.map((x, i) =>
+    `<div class="nx ${x.status}" data-p="${i ? 4 : 3}"><b>${i + 1}.</b> ${x.status === "partly"
+      ? `<span class="dl">Delvist</span>${esc(x.label)}${x.missing ? `<div class="miss">Mangler: ${esc(x.missing)}</div>` : ""}`
+      : esc(x.say || x.label)}</div>`).join("")}</div>`;
+}
+
+// "3 klaret · 2 delvist af 7": how far the talepapir is, partly answered ones counted apart
+function itemCount(items) {
+  const done = items.filter((i) => i.status === "covered").length, part = items.filter((i) => i.status === "partly").length;
+  return `${done} klaret${part ? ` · ${part} delvist` : ""} af ${items.length}`;
+}
+
+function cueHtml(c, p) {
+  return `<div class="cue ${c.kind}"${p ? ` data-p="${p}"` : ""}>${esc(c.text)}${c.source ? `<span class="src">${esc(c.source)}</span>` : ""}</div>`;
+}
+
+// The coach's verdict right after the call (moments, what to do instead, whose principle)
+function debriefHtml(l, short) {
+  if (!l || !l.debrief_status) return "";
+  if (l.debrief_status === "writing") return `<section><h2>Resultat</h2><div class="empty">Eksperterne gennemgår opkaldet...</div></section>`;
+  const d = l.debrief || {};
+  if (!d.verdict) return "";
+  // Rasmus 4 Nov: "way too long; the numbers belong in the standard questions, shown visually; don't
+  // quote me and then explain it in English". So: a result card. The standard questions as a grid
+  // (this call / on file / missing), next steps, what to ask next time, and two coach lines that are
+  // only the Danish line to use and whose principle it is.
+  const std = l.std || [];
+  const got = Object.fromEntries((d.answers || []).map((a) => [a.id, a]));
+  // a missing question shows the line to ask (Rasmus 4 Nov: "not just 'delivery', the question that gets
+  // an answer"), and an industry estimate where there is one, marked as an estimate
+  const est = Object.fromEntries((d.estimates || []).map((e) => [e.id, e]));
+  const rows = std.map((q) => {
+    const a = got[q.id], e = est[q.id];
+    const state = a ? (a.status === "vague" ? "vague" : "now") : q.on_file ? "before" : e ? "est" : "missing";
+    const text = a ? a.answer : q.on_file ? (q.on_file_da || q.on_file)
+      : e ? `≈ ${e.range} (${e.basis}) "${e.ask}"` : `"${q.da}"`;
+    return {q, state, text};
+  });
+  // the first-call questions first; the rest (delivery, upsell, lifetime...) folded away
+  const CORE = ["channels", "tried_before", "pipeline", "close_rate", "capacity", "seasonality", "ad_spend", "aov", "margin", "closer", "sales_process", "response_speed"];
+  const isCore = (r) => CORE.includes(r.q.id) || r.state === "now" || r.state === "vague";
+  const row = (r) => `<div class="sq ${r.state}"><span class="dot2"></span><span class="k">${esc(r.q.short)}</span><span class="v">${esc(r.text)}</span></div>`;
+  const shown = short ? rows.filter((r) => r.state === "now" || r.state === "vague") : rows.filter(isCore);
+  const rest = short ? [] : rows.filter((r) => !isCore(r));
+  const missing = rows.filter((r) => r.state === "missing" && CORE.includes(r.q.id)).length;
+  const grid = d.answers && std.length ? `<div class="std">${shown.map(row).join("")}
+      ${rest.length ? `<details id="stdall" ${stdOpen ? "open" : ""}><summary>Vis alle ${rows.length}</summary>${rest.map(row).join("")}</details>` : ""}
+      ${short && missing ? `<div class="sub">${missing} vigtige spørgsmål mangler stadig</div>` : ""}</div>` : "";
+  const byId = Object.fromEntries(std.map((q) => [q.id, q]));
+  // a standard question's Danish line; a checklist number (client calls, before 4 Nov) its item's label
+  const askNext = (d.ask_next || []).map((i) => byId[i] ? byId[i].da
+    : /^\d+$/.test(String(i)) ? ((l.items || [])[+i - 1] || {}).label : i).filter(Boolean).slice(0, short ? 2 : 3);
+  const b = l.booking;
+  const book = !b ? "" : b.status === "booked"
+    ? `<div class="book done">Booket: ${esc(b.when)}, ${b.minutes} min ${b.link ? `<a class="chip" href="${esc(b.link)}" target="_blank" rel="noopener">Åbn i kalenderen</a>` : ""}</div>`
+    : b.status === "draft" ? `<div class="book"><div class="lbl">Næste møde: ${esc(b.when)}, ${b.minutes} min</div>
+        <div class="sub">${esc(b.title)} · inviterer ${esc((b.attendees || []).join(", "))}</div>
+        ${(b.clashes || []).length ? `<div class="clash">Overlapper eller under 30 min luft: ${b.clashes.map(esc).join("; ")}</div>` : ""}
+        ${b.note ? `<div class="sub">${esc(b.note)}</div>` : ""}
+        ${b.demo ? "" : `<button type="button" id="bookit" class="save">Book mødet</button>`}</div>`
+    : `<div class="sub">${esc(b.note || "")}</div>`;
+  // talepapir questions the client only partly answered, and the gap (calls from 4 Nov carry it)
+  const deeper = (l.items || []).filter((i) => i.status === "partly").slice(0, short ? 2 : 4);
+  const moments = [...(d.moments || [])].sort((a, b) => (a.at || "").padStart(5, "0").localeCompare((b.at || "").padStart(5, "0")));
+  const coach = moments.slice(0, 2).map((m) => `<li><b>${esc(m.at)}</b> "${esc(m.say || m.better || "")}" <span class="src">${esc(m.expert)}</span></li>`).join("");
+  return `<section class="debrief"><h2>Resultat${l.debrief_after_s != null && !short ? `, ${l.debrief_after_s} sek. efter opkaldet` : ""}</h2>
+    <div class="lbl">${esc(d.verdict)}</div>
+    ${grid}
+    ${book}
+    ${(d.next_steps || []).length ? `<div class="bh">Næste skridt</div><ul class="bl">${d.next_steps.slice(0, 3).map((s) => `<li>${esc(s)}</li>`).join("")}</ul>` : ""}
+    ${askNext.length ? `<div class="bh">Spørg næste gang</div><ul class="bl">${askNext.map((s) => `<li>${esc(s)}</li>`).join("")}</ul>` : ""}
+    ${deeper.length ? `<div class="bh">Delvist besvaret, grav dybere</div><ul class="bl">${deeper.map((i) =>
+      `<li><b>${esc(i.label)}</b>${i.missing ? `<span class="miss" style="display:inline;margin-left:6px">mangler ${esc(i.missing)}</span>` : ""}</li>`).join("")}</ul>` : ""}
+    ${coach ? `<div class="bh">Coach</div><ul class="moments">${coach}</ul>` : ""}
+    ${d.practise ? `<div class="say"><b>Øv:</b> ${esc(d.practise)}</div>` : ""}</section>`;
+}
+let dbOpen = false, stdOpen = false;
+
+// What the Sales rep's check found per coming call (from an add-on): a marker per item.
+// Only what needs a look or links somewhere; a call with nothing to say reads "Klar".
+const READY_DA = {
+  who: {missing: "Ingen leadfil", warn: "Usikker match"},
+  invite: {warn: "Invitation til forkert mail?", missing: "Invitation kom retur"},
+  talepapir: {ok: "Talepapir", later: "Talepapir kommer", todo: "Talepapir laves", missing: "Talepapir fejlede"},
+  pa: {ok: "PA", todo: "PA bygges", missing: "PA mangler"},
+  report: {ok: "Rapport", warn: "Ingen rapport"},
+};
+function readyChips(items) {
+  return (items || []).map((i) => {
+    const label = (READY_DA[i.key] || {})[i.status];
+    if (!label) return "";
+    const txt = (i.status === "ok" ? "✓ " : i.status === "missing" || i.status === "warn" ? "! " : "") + esc(label);
+    return i.url ? `<a class="rd ${i.status}" href="${esc(i.url)}" target="_blank" rel="noopener">${txt}</a>`
+      : `<span class="rd ${i.status}">${txt}</span>`;
+  }).join("") || `<span class="rd ok">✓ Klar</span>`;
+}
+// The day's calls (Rasmus 2026-11-04: "every morning: you have these calls today, discovery, client
+// meeting...; the planned things ready in the background, and what I still have to do myself").
+const TYPE_DA = {discovery: "Første møde", walkthrough: "Gennemgang", internal: "Team", pa_walkthrough: "Gennemgang af PA", audit_walkthrough: "Gennemgang af audit",
+  close: "Lukkemøde", reconnect: "Genoptag", partner: "Partner", review: "Kundemøde", kickoff: "Opstart", other: "Andet"};
+const dkDay = (t) => new Date(t).toLocaleDateString("sv-SE");
+const clock = (t, tz) => new Date(t).toLocaleTimeString("en-GB", {timeZone: tz, hour: "2-digit", minute: "2-digit"});
+const callTime = (c) => `${clock(c.start)}`;
+// What only Rasmus can do, from the check's gaps; the builders do the rest by themselves
+function todos(c) {
+  const n = c.name || c.title;
+  return (c.items || []).filter((i) => i.status === "missing" || i.status === "warn").map((i) => ({
+    invite: i.status === "missing" ? `Send ${n} mødelinket på SMS eller en anden mail: invitationen kom retur`
+      : `Tjek ${n}s mailadresse: invitationen gik til en anden end leadfilens`,
+    pa: `PA til ${n}: den automatiske ${/failed/.test(i.note) ? "fejlede" : "når det ikke"}. Byg den selv, eller tag kaldet uden`,
+    talepapir: `Talepapir til ${n} fejlede: lav det selv`,
+    who: i.status === "missing" ? `Ingen leadfil for "${c.title}": opret den, så kaldet kan forberedes` : `Tjek hvem "${c.title}" er med`,
+    report: `Ingen månedsrapport til ${n}`,
+  }[i.key])).filter(Boolean);
+}
+function dayPlan(list) {
+  const now = Date.now(), today = dkDay(now), tomorrow = dkDay(now + 864e5);
+  const calls = (list || []).filter((c) => dkDay(c.start) <= tomorrow);
+  if (!calls.length) return "";
+  const todo = calls.flatMap(todos);
+  const group = (label, day) => {
+    const rows = calls.filter((c) => dkDay(c.start) === day);
+    return rows.length ? `<section><h2>${label}</h2><ul class="up calls">${rows.map((c) =>
+      `<li data-brief="${esc(c.event_id)}" tabindex="0" role="button"><div class="lbl">${esc(callTime(c))} · ${esc(c.title)}</div>
+       <div class="ctype">${esc(TYPE_DA[c.type] || "Andet")}${(lastState && (lastState.briefs || {})[c.event_id]) ? " · overblik klar" : ""}</div>
+       <div class="rds">${readyChips(c.items)}</div></li>`).join("")}</ul></section>` : "";
+  };
+  return (todo.length ? `<section class="todo-box"><h2>Du skal selv</h2><ul class="bl">${todo.map((t) => `<li>${esc(t)}</li>`).join("")}</ul></section>` : "")
+    + group("I dag", today) + group("I morgen", tomorrow);
+}
+// the small window: what to do, then one line per call today
+function dayPlanMini(list) {
+  const today = dkDay(Date.now());
+  const calls = (list || []).filter((c) => dkDay(c.start) === today);
+  const todo = (list || []).flatMap(todos).slice(0, 2);
+  if (!calls.length && !todo.length) return "";
+  return `<div class="m-brief">${todo.map((t) => `<div><b>! ${esc(t)}</b></div>`).join("")}
+    ${calls.length ? `<div class="bh">I dag</div>` : ""}${calls.map((c) =>
+      `<div>${esc(clock(c.start))} · ${esc(c.name || c.title)} <span class="ctype">${esc(TYPE_DA[c.type] || "")}</span></div>`).join("")}</div>`;
+}
+
+function briefHtml(b) {
+  if (!b) return "";
+  const list = (xs) => xs && xs.length ? `<ul class="bl">${xs.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>` : "";
+  return `${b.who ? `<div class="lbl">${esc(b.who)}</div>` : ""}
+    ${b.goal ? `<div class="say"><b>Mål:</b> ${esc(b.goal)}</div>` : ""}
+    ${b.numbers && b.numbers.length ? `<div class="bh">Tal</div>${list(b.numbers)}` : ""}
+    ${b.left_off && b.left_off.length ? `<div class="bh">Sidst</div>${list(b.left_off)}` : ""}
+    ${b.history && b.history.length ? `<div class="bh">Indtil nu</div>${list(b.history)}` : ""}
+    ${b.unanswered && b.unanswered.length ? `<div class="bh">Ikke besvaret endnu</div>${list(b.unanswered)}` : ""}`;
+}
+
+function feedbackBox(l) {
+  if (!l) return "";
+  if (l.feedback) return `<section><div class="empty">Feedback gemt${l.feedback.note ? `: "${esc(l.feedback.note)}"` : ""}. Næste opkald bruger den.</div></section>`;
+  return `<section class="fb"><h2>Hvordan var coachen på det her opkald?</h2>
+    <div class="row"><button type="button" class="rate ${fbRating === "useful" ? "on" : ""}" data-r="useful">Brugbar</button>
+      <button type="button" class="rate ${fbRating === "not_useful" ? "on" : ""}" data-r="not_useful">Ikke brugbar</button></div>
+    <textarea id="fbnote" rows="2" placeholder="Hvad skal den gøre anderledes? (valgfrit)">${esc(fbDraft)}</textarea>
+    <button type="button" id="fbsave" class="save">Gem feedback</button></section>`;
+}
+
+function wireFeedback() {
+  const why = $("#dbwhy");
+  if (why) why.ontoggle = (e) => { dbOpen = e.target.open; };
+  const all = $("#stdall");
+  if (all) all.ontoggle = (e) => { stdOpen = e.target.open; };
+  const book = $("#bookit");
+  if (book) book.onclick = async () => {
+    if (window.COPILOT_PREVIEW) return;
+    book.disabled = true; book.textContent = "Booker...";
+    await fetch("/book", {method: "POST", body: "{}"}).catch(() => {});
+    tick();
+  };
+  document.querySelectorAll(".rate").forEach((b) => b.onclick = () => { fbRating = b.dataset.r; if (lastState) render(lastState); });
+  const note = $("#fbnote");
+  if (note) note.oninput = (e) => { fbDraft = e.target.value; };
+  // the app window is a panel that never takes focus; a click here brings it forward, so typing and
+  // dictation (Wispr Flow) land in the box (widget.swift userContentController)
+  if (note) note.onfocus = () => { try { window.webkit.messageHandlers.copilot.postMessage("type"); } catch (e) { /* a browser tab */ } };
+  const save = $("#fbsave");
+  if (save) save.onclick = async () => {
+    if (window.COPILOT_PREVIEW) return;
+    await fetch("/feedback", {method: "POST", body: JSON.stringify({rating: fbRating, note: fbDraft,
+      call: view === "call" ? detailId : undefined})}).catch(() => {});
+    fbRating = null; fbDraft = "";
+    if (view === "call") loadCall(detailId);
+    tick();
+  };
+}
+
+function controls(st) {
+  const s = st.settings || {enabled: true, auto_open: "all"};
+  const labels = st.auto_open_labels || {all: "Ved hvert opkald"};
+  const opts = Object.entries(labels).map(([k, v]) => `<option value="${k}" ${k === s.auto_open ? "selected" : ""}>${esc(v)}</option>`).join("");
+  return `<section class="controls"><label for="auto">Åbner selv</label><select id="auto">${opts}</select>
+    <label class="jn"><input type="checkbox" id="join" ${s.auto_join !== false ? "checked" : ""}> Åbn Meet 2 min før</label>
+    <button type="button" id="power" class="${s.enabled ? "off" : "on"}">${s.enabled ? "Slå coachen fra" : "Slå coachen til"}</button></section>`;
+}
+
+function wireControls(st) {
+  const s = st.settings || {enabled: true};
+  const post = (body) => window.COPILOT_PREVIEW ? null : fetch("/settings", {method: "POST", body: JSON.stringify(body)}).then(tick).catch(() => {});
+  const auto = $("#auto"), power = $("#power"), join = $("#join");
+  if (auto) auto.onchange = (e) => post({auto_open: e.target.value});
+  if (join) join.onchange = (e) => post({auto_join: e.target.checked});
+  if (power) power.onclick = () => post({enabled: !s.enabled});
+}
+
+function nextCall(n) {
+  if (!n) return "";
+  return `<section><h2>Næste opkald: ${esc(n.title)} ${modeTag(n)}</h2>
+    ${(n.ready || []).length ? `<div class="rds">${readyChips(n.ready)}</div>` : ""}
+    ${(n.links || []).length ? `<div class="row links">${links(n)}</div>` : ""}
+    <div class="brief">${briefHtml(n.brief)}</div></section>`;
+}
+
+function idle(st) {
+  const l = st.last;
+  if (st.next && (!st.settings || st.settings.enabled)) return nextCall(st.next) + (l ? debriefHtml(l, true) + feedbackBox(l) : "");
+  const coming = st.settings && !st.settings.enabled ? "" : dayPlan(st.readiness);
+  if (st.settings && !st.settings.enabled) return `<section><div class="idle" style="padding:24px 4px">Coachen er slået fra.<br>Intet bliver målt, skrevet ned eller opsummeret, før du slår den til. Optageren kører som før.</div></section>`;
+  if (!l) return `<div class="idle">Venter på et opkald.<br>Åbner selv, når et opkald starter.</div>${coming}`;
+  const covered = (l.items || []).filter((i) => i.status === "covered").length;
+  const notes = l.notes_status === "writing" ? `<section><h2>Hurtige noter</h2><div class="empty">Skriver noterne ud fra den levende transskription...</div></section>`
+    : l.notes ? `<section class="notes"><h2>Hurtige noter, ${l.notes_after_s ?? "?"} sek. efter opkaldet</h2>${md(l.notes)}
+        <div class="sub">${esc(l.notes_file || "")}<br>Den fulde transskription erstatter dem, når Mac'en er ledig.</div></section>`
+    : l.notes_status === "ready" ? `<section><h2>Hurtige noter</h2><div class="empty">For lidt sagt til et resumé. Transskriptionen ligger i ${esc(l.notes_file || "optagelsesmappen")}.</div></section>`
+    : l.notes_status ? `<section><h2>Hurtige noter</h2><div class="empty">${esc(l.notes_status)}</div></section>` : "";
+  return `${coming}<section><div class="sub">Venter på et opkald. Sidste: ${esc(l.title)}</div>
+    <div class="share" style="margin-top:6px"><span class="big ${shareClass(l.share, l.target)}" style="font-size:30px">${l.share ?? "?"}%</span>
+    <span class="sub">du talte${l.target ? ` (mål ${l.target[0]}-${l.target[1]}%)` : ""}<br>længst: dig ${mmss(l.my_longest_s)}, dem ${mmss(l.their_longest_s)}${l.items && l.items.length ? ` · ${covered}/${l.items.length} på tjeklisten` : ""}</span></div></section>${debriefHtml(l)}${feedbackBox(l)}${notes}${linksBar(l.links)}`;
+}
+
+// The Call Copilot widget (tools/callrec/widget.swift) loads ?widget=1: compact while the window is
+// small, the full view once it is made taller.
+const WIDGET = new URLSearchParams(location.search).has("widget");
+const compact = () => WIDGET && (innerHeight < 480 || innerWidth < 300);
+let lastState = null;
+addEventListener("resize", () => { if (lastState) { render(lastState); markMore(); } });
+
+function lastLine(st) {
+  const live = (st.live || []).slice(-1)[0];
+  if (live) return `<div class="m-live live" data-p="9"><b>${esc(live.who)}:</b> ${esc(live.text)}</div>`;
+  const l = (st.lines || []).slice(-1)[0];
+  return l ? `<div class="m-live" data-p="9"><b>${esc(l.who)}:</b> ${esc(l.text)}</div>` : `<div class="m-live empty" data-p="9">Lytter...</div>`;
+}
+
+function renderMini(st) {
+  const s = st.settings || {enabled: true};
+  if (!st.active && !st.title) {
+    const l = st.last;
+    const n = st.next;
+    $("#app").innerHTML = `<div class="mini">${tabs()}${
+      !s.enabled ? `<div class="empty">Coachen er slået fra.</div>`
+      : n ? `<div class="m-top"><span>Næste opkald</span><span class="m-type">${esc(n.type_label)}</span></div>
+         <div class="m-brief"><b>${esc((n.brief || {}).who || n.title)}</b>${(n.brief || {}).goal ? `<br>Mål: ${esc(n.brief.goal)}` : ""}${((n.brief || {}).unanswered || []).slice(0, 2).map((u) => `<br>Åbent: ${esc(u)}`).join("")}</div>
+         ${(n.ready || []).length ? `<div class="rds">${readyChips(n.ready)}</div>` : ""}
+         ${(n.links || []).length ? `<div class="sub links">${links(n)}</div>` : ""}`
+      : !l ? `${dayPlanMini(st.readiness)}<div class="empty">Venter på et opkald. Åbner selv, når et starter.</div>`
+      : `${dayPlanMini(st.readiness)}
+         <div class="m-top"><span>Sidste opkald</span><span class="m-type">${esc(l.title)}</span></div>
+         <div class="m-talk"><span class="m-pct ${shareClass(l.share, l.target)}">${l.share ?? "?"}%</span><span class="sub">du talte${l.target ? `, mål ${l.target[0]}-${l.target[1]}%` : ""}</span></div>
+         ${debriefHtml(l, true)}
+         <div class="sub">${l.notes_status === "writing" ? "Skriver de hurtige noter..." : l.notes ? "Hurtige noter klar: gør vinduet højere for at læse dem." : ""}</div>
+         ${feedbackBox(l)}${linksBar(l.links)}`
+    }<button type="button" id="power" class="m-power">${s.enabled ? "Slå fra" : "Slå til"}</button></div>`;
+    wireTabs();
+    wireControls(st);
+    wireFeedback();
+    fillUpNext(st);
+    return;
+  }
+  const t = st.target, left = st.planned ? st.planned - st.elapsed : null;
+  const clockCls = left == null ? "" : left < 0 ? "crit" : left <= 300 ? "warn" : "";
+  const open = st.items.filter((i) => i.status !== "covered");
+  const dots = st.items.map((i) => `<span class="dot ${i.status}" title="${esc(i.label)}"></span>`).join("");
+  // Rasmus 4 Nov: "a lot breaks as soon as I make it small; keep it responsive all the time". What
+  // fits the height, most important first: talk share, the top cue, the next 2 questions (always 2,
+  // his 4 Nov rule, unless the window is tiny), then the second cue, progress, the last line, buttons.
+  const cues = st.cues.slice(0, 2);
+  const talkCue = st.cues.some((c) => c.kind === "talk");
+  $("#app").innerHTML = `<div class="mini">
+    <div class="m-top" data-p="2.5"><span class="clock ${clockCls}">${st.countdown ? "" : `${mmss(st.elapsed)}${st.planned ? ` / ${mmss(st.planned)}` : ""}`}</span>
+      <span class="m-type">${modeTag(st)} ${esc(st.type_label)}${t ? ` · ${t[0]}-${t[1]}%` : ""}</span></div>
+    ${countdown(st)}
+    <div class="m-talk">${avatar(st)}<span class="m-pct ${shareClass(st.share, t)}">${st.share ?? "--"}%</span>
+      <div class="bar m-bar">${t ? `<div class="band" style="left:${t[0]}%;width:${t[1] - t[0]}%"></div>` : ""}<div class="fill" style="width:${st.share ?? 0}%"></div>${st.share5 != null ? `<div class="fill5" style="left:${st.share5}%"></div>` : ""}</div></div>
+    ${st.stretch >= 30 && !talkCue ? `<div class="stretch" data-p="7">Dig: ${mmss(st.stretch)} i træk</div>` : ""}
+    ${cues.map((c, i) => cueHtml(c, i ? 5 : 2)).join("")
+      || (st.brief && st.elapsed < 240 ? `<div class="m-brief" data-p="6"><b>${esc(st.brief.who || st.title)}</b>${st.brief.goal ? `<br>Mål: ${esc(st.brief.goal)}` : ""}</div>` : "")}
+    ${nextAsk(st)}
+    ${st.items.length ? `<div class="m-items" data-p="8">${dots}<span class="sub">${itemCount(st.items)}</span></div>` : ""}
+    ${lastLine(st)}
+    ${linksBar(liveLinks(st), 6)}
+  </div>`;
+  fit();
+}
+
+// The compact window never cuts a cue or a question in half: while the content is taller than the
+// window, hide the least important block (highest data-p) first. Talk share and the clock always stay.
+function fit() {
+  const fits = () => document.documentElement.scrollHeight <= innerHeight + 1;
+  const blocks = [...document.querySelectorAll("#app [data-p]")].sort((a, b) => b.dataset.p - a.dataset.p);
+  const hidden = [];
+  for (const el of blocks) {
+    if (fits()) break;
+    el.style.display = "none";
+    hidden.push(el);
+  }
+  // then put back, most important first, whatever still fits (a short block below a long one)
+  for (const el of hidden.reverse()) {
+    el.style.display = "";
+    if (!fits()) el.style.display = "none";
+  }
+  const head = document.querySelector("#app .next .bh");
+  if (head && ![...document.querySelectorAll("#app .next .nx")].some((x) => x.style.display !== "none")) head.style.display = "none";
+}
+
+const PREP_DA = {"talepapir": "talepapir", "open questions": "åbne spørgsmål", "standard questions": "standardspørgsmål",
+  "client file": "kundefil", "lead file": "leadfil", "last call": "sidste opkald", "practice talepapir": "øve-talepapir", "mail": "mail"};
+const aiDa = (a) => ({"on": "til", "off": "fra", "waiting for the plan": "venter på planen",
+  "waiting for the other side": "venter på den anden part", "off for team calls": "fra ved teammøder"}[a]
+  || String(a || "").replace(/^off: /, "fra: ").replace(/^retrying: /, "prøver igen: "));
+
+// ---- Between calls: Overblik (the day, the last call) and Opkald (every call, and one call's result).
+// Rasmus 2026-11-04: "go into all the earlier calls and switch between the views: a general overview, and
+// one where I go straight into how this specific call went". A live call always shows the live view.
+let view = "overview", callsCache = null, callsAt = 0, detailId = null, detailCache = null, historyHtml = "";
+async function loadCalls(force) {
+  if (window.COPILOT_PREVIEW || (!force && callsCache && Date.now() - callsAt < 30000)) return;
+  callsAt = Date.now();
+  try { callsCache = await (await fetch("/calls", {cache: "no-store"})).json(); } catch (e) { /* next tick */ }
+  if (lastState) render(lastState);
+}
+// ---- "Bliv bedre" (Rasmus 2026-11-04: "somewhere I can see how I am, how I get better and what I am missing,
+// and weekly goals, e.g. not going over time or not talking too much"): from every recorded call, practice calls
+// left out; the coach's read is refreshed in the background after new calls (call_copilot.py growth())
+let growthCache = null, growthAt = 0;
+async function loadGrowth(force) {
+  if (window.COPILOT_PREVIEW || (!force && growthCache && Date.now() - growthAt < 60000)) return;
+  growthAt = Date.now();
+  try { growthCache = await (await fetch("/growth", {cache: "no-store"})).json(); } catch (e) { /* next tick */ }
+  if (lastState) render(lastState);
+}
+const weekNo = (w) => String(w || "").split("W")[1] || "";
+// one bar per week (share of that week's meetings that made the goal), the target as a dashed line; the
+// current week in full colour, the ones before lighter; an empty week keeps its place
+function weekChart(weeks, target, label) {
+  // drawn at the window's own width, so the text stays the same size in a narrow window and a wide one
+  const W = Math.max(190, Math.min(520, innerWidth - 60)), H = 88, top = 15, bottom = 16, n = weeks.length, gap = 8;
+  const bw = (W - 34 - gap * (n - 1)) / n, ch = H - top - bottom, y = (v) => top + ch * (1 - v / 100);
+  const bars = weeks.map((w, i) => {
+    const x = i * (bw + gap), mid = x + bw / 2, now = i === n - 1;
+    const wl = `<text class="wl" x="${mid}" y="${H - 3}">${now ? "nu" : bw < 38 ? weekNo(w.week) : `uge ${weekNo(w.week)}`}</text>`;
+    if (w.pct == null) return wl;
+    const h = Math.max(2, top + ch - y(w.pct));
+    return `<rect class="${w.pct >= target ? "b-ok" : "b-bad"}${now ? "" : " old"}" x="${x}" y="${top + ch - h}" width="${bw}" height="${h}" rx="3"><title>uge ${weekNo(w.week)}: ${w.hit} af ${w.of} møder</title></rect>
+      <text x="${mid}" y="${top + ch - h - 3}">${w.pct}%</text>${wl}`;
+  }).join("");
+  return `<svg class="wchart" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="${esc(label)} pr. uge mod målet ${target}%">
+    <line class="base" x1="0" x2="${W - 34}" y1="${top + ch}" y2="${top + ch}"/>
+    <line class="tl" x1="0" x2="${W - 30}" y1="${y(target)}" y2="${y(target)}"/><text class="tlb" x="${W}" y="${y(target) + 3}">mål</text>${bars}</svg>`;
+}
+// Three goals, nothing to set up (Rasmus 4 Nov: "max 3 things, really simple; we must always be on time"): this
+// week's calls against the target, and the weeks before as one line
+function growthHtml() {
+  const g = window.COPILOT_PREVIEW ? window.COPILOT_PREVIEW.growth : growthCache;
+  if (!window.COPILOT_PREVIEW) loadGrowth();
+  if (!g) return `<section><div class="empty">Henter dine tal...</div></section>`;
+  const goalRow = (x) => {
+    const p = x.this.pct, bad = p != null && p < x.target;
+    // better or worse: this week against the last week that had meetings
+    const prev = x.weeks.slice(0, -1).filter((w) => w.pct != null).pop();
+    const trend = p == null || !prev ? "" : p > prev.pct ? `<span class="trend up">↑ bedre end uge ${weekNo(prev.week)}</span>`
+      : p < prev.pct ? `<span class="trend down">↓ værre end uge ${weekNo(prev.week)}</span>` : `<span class="trend flat">som uge ${weekNo(prev.week)}</span>`;
+    const dots = (x.calls || []).map((c) => `<i class="${c.hit ? "" : "bad"}" title="${esc(c.info)}"></i>`).join("");
+    return `<div class="gl"><div class="gl-h"><b>${esc(x.label)}</b><span class="gl-n ${p == null ? "" : bad ? "bad" : "ok"}">${x.this.of ? `${x.this.hit} af ${x.this.of} møder` : "ingen møder endnu"}</span></div>
+      <div class="gl-h"><span class="gl-dots" aria-label="Ugens møder: ${x.this.hit} af ${x.this.of} klarede målet">${dots}</span>${trend}</div>
+      ${weekChart(x.weeks, x.target, x.label)}
+      <div class="sub">${esc(x.about)} · mål: ${x.target >= 100 ? "hvert møde" : `${x.target}% af møderne`}</div></div>`;
+  };
+  const c = g.coach;
+  const atIso = g.coach_at ? new Date(g.coach_at * 1000).toISOString() : "";
+  const at = atIso ? `${new Date(atIso).toLocaleDateString("da-DK", {day: "numeric", month: "short"})} ${clock(atIso)}` : "";
+  const read = !c ? `<div class="empty">Coachen læser dine opkald. Det tager et minut.</div>`
+    : `<div class="lbl">${esc(c.headline)}</div>
+      ${(c.practise || []).slice(0, 2).map((x, i) => `<div class="tip"><b>${i + 1}. ${esc(x.text)}</b>
+        <div class="sub">${esc(x.why)}</div><div class="how">Sådan: ${esc(x.how)}</div><div class="ex">${esc(x.example)}</div></div>`).join("")}
+      ${(c.strengths || []).slice(0, 1).map((x) => `<div class="tip"><b>Det gør du godt:</b> ${esc(x.text)} <span class="ex">${esc(x.example)}</span></div>`).join("")}
+      <div class="sub" style="margin-top:6px">Coachens læsning af dine sidste ${g.coach_calls || ""} opkald med coachen${at ? `, ${at}` : ""}</div>`;
+  return `<section><h2>Ugens 3 mål, uge ${weekNo(g.week)}</h2>${g.goals.map(goalRow).join("")}
+      <div class="sub" style="margin-top:6px">Til tiden måles fra, da den anden part sidst talte, mod kalenderens sluttid.</div></section>
+    <section><h2>Sådan står du</h2>${read}</section>`;
+}
+async function loadCall(id) {
+  if (window.COPILOT_PREVIEW) return;
+  try { detailCache = await (await fetch("/call?id=" + encodeURIComponent(id), {cache: "no-store"})).json(); }
+  catch (e) { detailCache = {id, error: true}; }
+  if (lastState) render(lastState);
+}
+function tabs() {
+  return `<header class="band"><span class="name"><span>Sales Coach</span></span><nav class="tabs" aria-label="Visning"><button type="button" data-v="overview" class="${view === "overview" || view === "brief" ? "on" : ""}">Overblik</button>
+    <button type="button" data-v="calls" class="${view === "calls" || view === "call" ? "on" : ""}">Opkald</button>
+    <button type="button" data-v="growth" class="${view === "growth" ? "on" : ""}">Bliv bedre</button></nav></header><div id="upnext"></div>`;
+}
+function wireTabs() {
+  document.querySelectorAll(".tabs button").forEach((b) => b.onclick = () => {
+    view = b.dataset.v;
+    if (view === "calls") loadCalls(true);
+    if (view === "growth") loadGrowth(true);
+    render(lastState);
+  });
+  const open = (el) => { view = "call"; detailId = el.dataset.call; detailCache = null; loadCall(detailId); render(lastState); };
+  document.querySelectorAll("[data-call]").forEach((el) => {
+    el.onclick = () => open(el);
+    el.onkeydown = (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); open(el); } };
+  });
+  const back = $("#back");
+  if (back) back.onclick = () => { view = "calls"; render(lastState); };
+  const openBrief = (el) => { view = "brief"; briefId = el.dataset.brief; render(lastState); };
+  document.querySelectorAll("[data-brief]").forEach((el) => {
+    el.onclick = (e) => { if (!e.target.closest("a")) openBrief(el); };
+    el.onkeydown = (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openBrief(el); } };
+  });
+  const home = $("#home");
+  if (home) home.onclick = () => { view = "overview"; render(lastState); };
+}
+// One coming call's prep: made by the copilot up to 20 h ahead (call_copilot.py prep_upcoming), refreshed an
+// hour before; what is still missing comes from the Sales rep's check (an add-on)
+let briefId = null;
+function briefView(st) {
+  const home = `<button type="button" id="home" class="backb">← Overblik</button>`;
+  const r = (st.readiness || []).find((c) => c.event_id === briefId) || {};
+  const b = (st.briefs || {})[briefId];
+  const start = (b && b.start) || r.start;
+  const head = `<section><div class="lbl">${esc((b && b.title) || r.title || "")}</div>
+    <div class="sub">${start ? `${esc(dayLabel(start))} · ${esc(atTime(start))}` : ""}${b ? ` · ${esc(b.type_label)}` : r.type ? ` · ${esc(TYPE_DA[r.type] || "")}` : ""} ${b ? modeTag(b) : ""}</div>
+    ${(r.items || []).length ? `<div class="rds">${readyChips(r.items)}</div>` : ""}</section>`;
+  if (!b) return home + head + `<section><div class="empty">Overblikket laves, når opkaldet er under 20 timer væk (eller er ved at blive lavet nu).</div></section>`;
+  return home + head
+    + `<section><h2>Overblik</h2><div class="brief">${briefHtml(b.brief || {goal: b.goal})}</div></section>`
+    + ((b.ask || []).length ? `<section><h2>Spørg om</h2><ul class="bl">${b.ask.map((a) => `<li>${esc(a)}</li>`).join("")}</ul></section>` : "")
+    + (((b.brief || {}).decide || []).length ? `<section><h2>Beslut i dag</h2><ul class="bl">${b.brief.decide.map((a) => `<li>${esc(a)}</li>`).join("")}</ul></section>` : "")
+    + (((b.brief || {}).objections || []).length ? `<section><h2>Hvis de siger</h2><ul class="bl">${b.brief.objections.map((o) =>
+        `<li><b>${esc(o.doubt)}</b><br>${esc(o.answer)}</li>`).join("")}</ul></section>` : "")
+    + (((b.brief || {}).dont_say || []).length ? `<section><h2>Sig ikke</h2><ul class="bl">${b.brief.dont_say.map((a) => `<li>${esc(a)}</li>`).join("")}</ul></section>` : "")
+    + ((b.sessions || []).length ? `<section><h2>Andre chats om dem</h2><ul class="bl">${b.sessions.map((x) =>
+        `<li>${esc(x.date.slice(8, 10).replace(/^0/, ""))}/${esc(x.date.slice(5, 7).replace(/^0/, ""))}: ${esc(x.title)}</li>`).join("")}</ul></section>` : "")
+    + (b.prepared_at ? `<div class="sub">Forberedt ${esc(dayLabel(b.prepared_at))} ${esc(clock(b.prepared_at))}</div>` : "")
+    + linksBar(b.links);
+}
+const dayLabel = (t) => new Date(t).toLocaleDateString("da-DK", {weekday: "short", day: "numeric", month: "short"});
+const atTime = (t) => `${clock(t)}`;
+function callsHtml() {
+  if (!callsCache) { loadCalls(); return `<div class="empty">Henter opkald...</div>`; }
+  if (!callsCache.length) return `<div class="empty">Ingen opkald endnu.</div>`;
+  return `<ul class="calls">${callsCache.map((c) => `<li data-call="${esc(c.id)}" tabindex="0" role="button">
+      <div class="c1"><span class="cdate">${esc(dayLabel(c.started))} · ${esc(clock(c.started))}</span>
+        <span class="cpct ${shareClass(c.share, c.target)}">${c.share ?? "?"}%</span></div>
+      <div class="ctitle">${esc(c.title)}</div>
+      <div class="ctype">${esc(c.type_label)}${c.duration_s ? ` · ${Math.max(1, Math.round(c.duration_s / 60))} min` : ""}${c.demo ? " · øvesamtale" : ""}${c.coached ? " · coach" : ""}${c.feedback ? " · feedback givet" : ""}</div>
+      ${c.verdict ? `<div class="say">${esc(c.verdict)}</div>` : ""}</li>`).join("")}</ul>`;
+}
+function callHtml() {
+  const back = `<button type="button" id="back" class="backb">← Alle opkald</button>`;
+  const c = detailCache;
+  if (!c || c.id !== detailId) return back + `<div class="empty">Henter opkaldet...</div>`;
+  if (c.error) return back + `<div class="empty">Opkaldet kunne ikke hentes.</div>`;
+  const t = c.target;
+  const extra = c.transcript_url ? [{label: "Transskription", url: c.transcript_url}] : [];
+  return `${back}<section><div class="lbl">${esc(c.title)}</div>
+      <div class="sub">${esc(dayLabel(c.started))} · ${esc(atTime(c.started))}${c.type_label ? ` · ${esc(c.type_label)}` : ""}${c.duration_s ? ` · ${Math.max(1, Math.round(c.duration_s / 60))} min` : ""}${c.demo ? " · øvesamtale" : ""}</div>
+      <div class="share" style="margin-top:6px"><span class="big ${shareClass(c.share, t)}" style="font-size:30px">${c.share ?? "?"}%</span>
+        <span class="sub">du talte${t ? ` (mål ${t[0]}-${t[1]}%)` : ""}<br>længst: dig ${mmss(c.my_longest_s)}, dem ${mmss(c.their_longest_s)}</span></div></section>
+    ${c.coached ? debriefHtml(c) + feedbackBox(c)
+      : `<section><div class="empty">Coachen var ikke med på dette opkald, så der er ingen vurdering. Taletiden er fra optagelsen, noterne fra transskriptionen.</div></section>`}
+    ${c.notes ? `<section class="notes"><h2>Noter</h2>${md(c.notes)}</section>` : ""}
+    ${linksBar([...(c.links || []), ...extra])}`;
+}
+function renderHistory(st) {
+  const inner = view === "brief" ? briefView(st) : view === "call" ? callHtml() : view === "growth" ? growthHtml() : callsHtml();
+  const html = compact() ? `<div class="mini">${tabs()}${inner}</div>` : tabs() + inner;
+  if (html !== historyHtml) {   // unchanged: keep the scroll position and any typing
+    historyHtml = html;
+    $("#app").innerHTML = html;
+    wireTabs();
+    wireFeedback();
+    markMore();
+  }
+  fillUpNext(st);   // the countdown ticks on its own, without redrawing the list under it
+}
+
+function render(st) {
+  lastState = st;
+  if (st.active || st.title) view = "overview";   // a call: the live view, and its result after hang-up
+  if (!st.active && !st.title && view !== "overview") { renderHistory(st); return; }
+  historyHtml = "";
+  if (compact()) { renderMini(st); return; }
+  if (!st.active && !st.title) { $("#app").innerHTML = tabs() + idle(st) + controls(st); wireTabs(); wireControls(st); wireFeedback(); fillUpNext(st); return; }
+  const t = st.target;
+  const left = st.planned ? st.planned - st.elapsed : null;
+  const clockCls = left == null ? "" : left < 0 ? "crit" : left <= 300 ? "warn" : "";
+  const opts = Object.entries(st.types).map(([k, v]) => `<option value="${k}" ${k === st.type ? "selected" : ""}>${esc(v)}</option>`).join("");
+  const cues = st.cues.length ? st.cues.map((c) => cueHtml(c)).join("")
+    : `<div class="empty">På sporet. Bliv ved med at lytte.</div>`;
+  // open: the line to ask; partly: "Delvist", what he said and what is missing; covered: what he said
+  const items = st.items.length ? `<ul>${st.items.map((i) => `<li class="${i.status}"><span class="dot ${i.status}"></span>
+      <div><div class="lbl">${i.status === "partly" ? `<span class="dl">Delvist</span>` : ""}${esc(i.label)}</div>${
+        i.status === "open" || !i.got ? `<div class="say">${esc(i.say)}${i.why ? ` · ${esc(i.why)}` : ""}</div>` : ""}${
+        i.got && i.status !== "open" ? `<div class="got">Svar: ${esc(i.got)}</div>` : ""}${
+        i.status === "partly" && i.missing ? `<div class="miss">Mangler: ${esc(i.missing)}</div>` : ""}</div></li>`).join("")}</ul>`
+    : `<div class="empty">${st.ai === "on" || st.ai.startsWith("waiting") ? "Laver tjeklisten..." : "Ingen tjekliste (" + esc(aiDa(st.ai)) + ")"}</div>`;
+  let acc = 0;
+  const agenda = st.agenda.length ? `<ul class="agenda">${st.agenda.map((a, i) => { acc += a.min;
+      return `<li class="${i === st.planned_phase ? "now" : ""}"><span>${i === st.phase ? `<span class="here">Du er her: </span>` : ""}${esc(a.name)}</span><span>til ${acc}:00</span></li>`; }).join("")}</ul>
+      <div class="sub" style="margin-top:6px">Fed = hvor planen siger, du skal være nu</div>` : "";
+  const lines = (st.lines.map((l) => `<div><b>${esc(l.t)} ${esc(l.who)}:</b> ${esc(l.text)}</div>`).join("")
+    + (st.live || []).map((l) => `<div class="live"><b>${esc(l.t)} ${esc(l.who)}:</b> ${esc(l.text)}</div>`).join(""))
+    || `<div class="empty">Lytter...</div>`;
+  $("#app").innerHTML = `
+    <section>
+      <div class="top"><div class="title" title="${esc(st.title)}">${esc(st.title)}</div>
+        ${st.countdown ? "" : `<div class="clock ${clockCls}">${mmss(st.elapsed)}${st.planned ? ` / ${mmss(st.planned)}` : ""}</div>`}</div>
+      <div class="row">${modeTag(st)}<select id="type" aria-label="Opkaldstype">${opts}</select><span>${t ? `mål ${t[0]}-${t[1]}% dig` : "intet mål"} · ${esc(st.type_source)}</span></div>
+    </section>
+    ${countdown(st)}
+    <section>
+      <div class="share">${avatar(st)}<span class="big ${shareClass(st.share, t)}">${st.share ?? "--"}%</span>
+        <span class="sub">sidste 5 min ${st.share5 ?? "--"}%<br>dig ${mmss(st.talk_s[0])} · dem ${mmss(st.talk_s[1])}</span></div>
+      <div class="bar">${t ? `<div class="band" style="left:${t[0]}%;width:${t[1] - t[0]}%"></div>` : ""}
+        <div class="fill" style="width:${st.share ?? 0}%"></div>${st.share5 != null ? `<div class="fill5" style="left:${st.share5}%"></div>` : ""}</div>
+      ${st.stretch >= 30 && !st.cues.some((c) => c.kind === "talk") ? `<div class="stretch">Dig: ${mmss(st.stretch)} i træk</div>` : ""}
+    </section>
+    <section><h2>Nu</h2><div class="cues">${cues}</div>${nextAsk(st)}</section>
+    ${st.brief ? `<section><details id="brief" ${(briefOpen ?? st.elapsed < 300) ? "open" : ""}><summary>Overblik</summary><div class="brief">${briefHtml(st.brief)}</div></details></section>` : ""}
+    <section><h2>Tjekliste</h2>${st.goal ? `<div class="say" style="margin-bottom:8px">${esc(st.goal)}</div>` : ""}${items}</section>
+    ${agenda ? `<section><h2>Dagsorden</h2>${agenda}</section>` : ""}
+    <section><details ${openDetails ? "open" : ""} id="tx"><summary>Live transskription</summary><div class="lines">${lines}</div></details></section>
+    <footer><div>AI-stikord: ${esc(aiDa(st.ai))}${st.lag != null ? ` · linjer ${st.lag} sek. efter tale` : ""}${st.replay ? " · genafspilning" : ""}</div>
+      <div>Forberedelse: ${esc(st.prep_sources.map((x) => PREP_DA[x] || x).join(", ") || "intet fundet")}</div>
+      ${st.notes.map((n) => `<div>${esc(n)}</div>`).join("")}</footer>${controls(st)}${linksBar(liveLinks(st))}`;
+  wireControls(st);
+  $("#type").onchange = (e) => {
+    if (window.COPILOT_PREVIEW) return;
+    fetch("/type", {method: "POST", body: JSON.stringify({type: e.target.value})}).catch(() => {});
+  };
+  $("#tx").ontoggle = (e) => { openDetails = e.target.open; };
+  if ($("#brief")) $("#brief").ontoggle = (e) => { briefOpen = e.target.open; };
+}
+
+function markMore() {
+  document.querySelectorAll("#app .lbar").forEach((b) => b.classList.toggle("more", b.scrollWidth > b.clientWidth + 1));
+}
+
+async function tick() {
+  try {
+    // don't redraw under an open menu or while feedback is being typed
+    if (document.activeElement && ["type", "auto", "fbnote"].includes(document.activeElement.id)) return;
+    render(await (await fetch(document.visibilityState === "hidden" ? "/state?hidden=1" : "/state", {cache: "no-store"})).json());
+    markMore();
+  } catch (e) {
+    $("#app").innerHTML = `<div class="idle">Coachen kører ikke.<br>python3 scripts/call_copilot.py serve</div>`;
+  }
+}
+if (window.COPILOT_PREVIEW) {
+  render(window.COPILOT_PREVIEW);
+  markMore();
+} else {
+  tick();
+  setInterval(tick, 1000);
+}
+</script>
+</body>
+</html>
