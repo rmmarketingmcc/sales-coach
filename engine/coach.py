@@ -174,7 +174,8 @@ def stamp(seconds: float) -> str:
 # --------------------------------------------------------------------------- settings
 
 DEFAULTS = {"name": "", "company": "", "about": "", "language": "da", "enabled": True, "auto_open": "all",
-            "auto_join": True, "ai": "auto", "team_domains": [], "words": [], "addons": [], "targets": {}}
+            "auto_join": True, "ai": "auto", "team_domains": [], "words": [], "addons": [], "targets": {},
+            "keep_audio_days": 30}
 
 
 def load_settings() -> dict:
@@ -204,6 +205,11 @@ def save_settings(changes: dict) -> dict:
         if k in changes:
             v = changes[k]
             s[k] = [x.strip() for x in (v.split(",") if isinstance(v, str) else v or []) if str(x).strip()]
+    if "keep_audio_days" in changes:
+        try:
+            s["keep_audio_days"] = max(0, int(changes["keep_audio_days"]))
+        except (TypeError, ValueError):
+            pass
     if changes.get("api_key"):   # never in the settings file: into the Keychain
         ai.save_api_key(str(changes["api_key"]).strip())
     DATA.mkdir(parents=True, exist_ok=True)
@@ -1914,6 +1920,56 @@ def run_session(app: App, session: Session, stop: threading.Event) -> None:
         time.sleep(0.5)
 
 
+# --------------------------------------------------------------------------- after the call: the audio
+
+TIDY_AFTER = timedelta(minutes=15)   # a call the coach did not sit on: the recorder's own last writes are long done
+_TIDY = threading.Lock()
+
+
+def tidy_recordings() -> None:
+    """Raw call audio is about 700 MB an hour. Once a call is over and its notes are written, each track is
+    compressed (AAC, speech quality, about 15 MB an hour); after keep_audio_days the audio is deleted. The
+    transcript, notes and numbers stay. keep_audio_days 0 = the audio goes right after the call."""
+    if not _TIDY.acquire(blocking=False):   # a long call still compressing from the last minute
+        return
+    try:
+        keep = int(load_settings().get("keep_audio_days", 30))
+        active = active_recording()
+        now = datetime.now(timezone.utc)
+        for folder in sorted(p for p in ROOT.iterdir() if p.is_dir()) if ROOT.exists() else []:
+            meta = read_meta(folder)
+            if not meta or meta.get("status") == "recording" or (active and folder == active[0]):
+                continue
+            audio = list(folder.glob("*.caf")) + list(folder.glob("*.m4a"))
+            if not audio:
+                continue
+            try:
+                done_at = datetime.fromtimestamp((folder / "meta.json").stat().st_mtime, timezone.utc)
+                started = datetime.fromisoformat(meta["started"].replace("Z", "+00:00"))
+            except (OSError, KeyError, ValueError):
+                continue
+            if not (folder / "transcript.md").is_file() and now - done_at < TIDY_AFTER:
+                continue   # the notes still read the raw tracks
+            if now - started >= timedelta(days=keep):
+                for f in audio:
+                    f.unlink(missing_ok=True)
+                log(f"audio deleted after {keep} days: {folder.name}")
+                continue
+            for caf in folder.glob("*.caf"):
+                m4a = caf.with_suffix(".m4a")
+                r = subprocess.run(["afconvert", "-f", "m4af", "-d", "aac", "-c", "1", "-b", "32000", str(caf), str(m4a)],
+                                   capture_output=True, text=True, timeout=3600)
+                if r.returncode == 0 and m4a.exists() and m4a.stat().st_size > 0:
+                    caf.unlink()
+                else:
+                    m4a.unlink(missing_ok=True)
+                    log(f"audio not compressed: {caf} ({(r.stderr or '').strip()[:200]})")
+    except Exception as e:  # noqa: BLE001
+        log(f"tidy failed: {e}")
+    finally:
+        _TIDY.release()
+
+
 def _minute_tick() -> None:
     """Every minute, in the background: the recorder's meeting schedule, add-ons, the day list."""
     try:
@@ -1921,6 +1977,7 @@ def _minute_tick() -> None:
     except Exception as e:  # noqa: BLE001
         log(f"schedule not written: {e}")
     addons.tick()
+    threading.Thread(target=tidy_recordings, daemon=True).start()   # a long call takes a while to compress
     plan = day_plan()
     DAY_PLAN.clear()
     DAY_PLAN.update({"calls": plan, "generated_at": datetime.now(timezone.utc).isoformat()})
@@ -2200,6 +2257,8 @@ def main() -> None:
     se.add_argument("--words", help="names and terms for speech-to-text, comma separated")
     se.add_argument("--team-domains", dest="team_domains", help="your team's mail domains, comma separated")
     se.add_argument("--addons", help="add-on files, comma separated")
+    se.add_argument("--keep-audio-days", dest="keep_audio_days", type=int,
+                    help="days to keep call audio (compressed) before it is deleted; 0 = right after the call")
     args = p.parse_args()
     {"serve": cmd_serve, "replay": cmd_replay, "stats": cmd_stats, "cues": cmd_cues, "settings": cmd_settings}[args.cmd](args)
 
