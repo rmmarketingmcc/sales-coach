@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleIdentifier</key><string>dk.rmmarketing.salescoach</string>
+	<key>CFBundleName</key><string>Sales Coach</string>
+	<key>CFBundleDisplayName</key><string>Sales Coach</string>
+	<key>CFBundleExecutable</key><string>SalesCoach</string>
+	<key>CFBundleIconFile</key><string>AppIcon</string>
+	<key>CFBundlePackageType</key><string>APPL</string>
+	<key>CFBundleShortVersionString</key><string>0.2.0</string>
+	<key>CFBundleVersion</key><string>1</string>
+	<key>LSMinimumSystemVersion</key><string>14.4</string>
+	<key>NSHighResolutionCapable</key><true/>
+	<key>NSCalendarsFullAccessUsageDescription</key>
+	<string>Sales Coach reads your calendar on this Mac to know your meetings: who you meet, the agenda and when it ends. Nothing leaves your Mac except, with the AI on, to your own Claude.</string>
+	<key>NSCalendarsUsageDescription</key>
+	<string>Sales Coach reads your calendar on this Mac to know your meetings: who you meet, the agenda and when it ends. Nothing leaves your Mac except, with the AI on, to your own Claude.</string>
+	<!-- the window is served by the coach on 127.0.0.1 over plain http -->
+	<key>NSAppTransportSecurity</key>
+	<dict><key>NSAllowsLocalNetworking</key><true/></dict>
+</dict>
+</plist>
