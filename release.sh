@@ -31,6 +31,7 @@ NOTES=$(printf '%s\n' "$NOTES" | sed -e '/^[[:space:]]*$/d' -e 's/^[-*] //' -e '
 echo "$VERSION" > VERSION
 { head -2 CHANGELOG.md; printf '## %s (%s)\n\n%s\n\n' "$VERSION" "$(date '+%-d %b %Y')" "$NOTES"; tail -n +3 CHANGELOG.md; } > CHANGELOG.tmp
 mv CHANGELOG.tmp CHANGELOG.md
+python3 tests/changelog_json.py   # the guide page's version and "What's new" follow the release
 ./build.sh
 git add -A
 git commit -q -m "Release $VERSION" -m "$NOTES"
@@ -39,3 +40,4 @@ git push -q origin HEAD --tags
 gh release create "v$VERSION" build/Sales-Coach.zip --title "Sales Coach $VERSION" --notes "$NOTES"
 echo "Released $VERSION:"
 printf '%s\n' "$NOTES"
+echo "The page shows $VERSION within a minute. Window changed? Retake its pictures: .venv/bin/python tests/page_shots.py"
