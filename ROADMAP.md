@@ -30,6 +30,10 @@ here, and each user's own data through add-ons, so every improvement reaches eve
 - [x] Bug reports to GitHub issues from the menu bar, with the technical details filled in (never name, company or calls)
 - [ ] The check for client names and private data wired into `release.sh` (the hook is there: `SALES_COACH_LEAK_CHECK`)
 - [x] The guide page (GitHub Pages) in the RM look, with the install line and real screenshots from a made-up call
+- [x] GDPR: a reminder on every call to tell them you record (message to paste in the chat, or "said it"), saved
+      with the call; "Stop og slet" for the call going on; delete any saved call; audio and notes deleted after a set time
+- [x] The page follows the app: version and "What's new" from each release (`docs/changelog.json`), pictures retaken
+      from the made-up call with `tests/page_shots.py`
 
 ## 0.3: useful from day one for someone new
 
@@ -38,6 +42,9 @@ here, and each user's own data through add-ons, so every improvement reaches eve
 - [ ] The window in English as well as Danish (it follows the language setting)
 - [ ] Practice calls with an AI lead, using the Mac's own voice
 - [ ] A count of how many Macs use it (one anonymous ping a day, no id), like Sunscreen
+
+- [ ] Ready add-ons for your own systems: mail (Gmail, Outlook), text messages, a customer list or CRM, so the coach knows
+      who you meet before the call, suggests what to ask from what you already know, and updates your notes after it
 
 ## 0.4: one codebase for RM too
 

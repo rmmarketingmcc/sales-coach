@@ -38,7 +38,8 @@ Made by [RM Marketing](https://rm-marketing.dk).
 
 - Audio never leaves your Mac. Speech-to-text runs on the Mac (Whisper large-v3).
 - With the AI on, the transcript text and your call plan go to Claude, on **your own** Claude account (Claude Code, or your own API key). Nothing goes to us.
-- Recordings stay in a folder on your Mac.
+- Recordings stay in a folder on your Mac. The audio is compressed after each call and deleted after 7 days; transcripts and notes after a year. Both are switches under "Coach" in the menu bar (audio: right after the call / 7 / 30 days; notes: 30 / 90 / 365 days / never).
+- At the start of every call the window reminds you to tell the other side you record, with a ready message to paste in the meeting's chat; how and when you told them is saved with the call. "Stop og slet" stops the recording and deletes everything from that call; any saved call can be deleted from its page.
 - Recording a call is your responsibility. Tell the people you talk to that you record, and follow the rules where you work (in the EU, GDPR applies when you record for business).
 
 ## What you need
