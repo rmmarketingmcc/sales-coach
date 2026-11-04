@@ -57,6 +57,7 @@ FEEDBACK_FILE = DATA / "feedback.jsonl"
 PREP_FILE = DATA / "prep.json"
 JOINED_FILE = DATA / "joined.json"
 GROWTH_FILE = DATA / "growth.json"
+AGENDA_FILE = DATA / "agendas.json"   # your own agenda per calendar meeting, pasted before the call
 MORNING_FILE = DATA / "morning"
 LOCAL_TZ = datetime.now().astimezone().tzinfo
 
@@ -181,7 +182,7 @@ def stamp(seconds: float) -> str:
 
 DEFAULTS = {"name": "", "company": "", "about": "", "language": "da", "enabled": True, "auto_open": "all",
             "auto_join": True, "ai": "auto", "team_domains": [], "words": [], "addons": [], "targets": {},
-            "keep_audio_days": 7, "keep_notes_days": 365, "notice": True, "notice_text": ""}
+            "keep_audio_days": 7, "keep_notes_days": 365, "notice": True, "notice_auto": True, "notice_text": ""}
 
 
 def load_settings() -> dict:
@@ -224,6 +225,8 @@ def save_settings(changes: dict) -> dict:
             pass
     if "notice" in changes:
         s["notice"] = bool(changes["notice"])
+    if "notice_auto" in changes:
+        s["notice_auto"] = bool(changes["notice_auto"])
     if "notice_text" in changes:
         s["notice_text"] = str(changes["notice_text"] or "").strip()[:600]
     if changes.get("api_key"):   # never in the settings file: into the Keychain
@@ -240,6 +243,43 @@ def notice_text(ai_on: bool) -> str:
     days = int(s.get("keep_audio_days", 7))
     return (s.get("notice_text") or t["notice"]).format(ai=t["notice_ai"] if ai_on else "",
                                                         when=t["notice_now"] if days == 0 else t["notice_days"].format(d=days))
+
+
+_BULLET = re.compile(r"^\s*(?:[-*•–]|\d{1,2}[.)])\s+(.+)$")
+
+
+def agenda_points(text: str, bullets_only: bool = False) -> list[str]:
+    """Your agenda, one point per line ("- ", "• ", "1. " or, pasted, plain lines); at most 12. From an invite
+    only list lines count (bullets_only), so its prose is never read as an agenda. Invites may carry HTML."""
+    text = re.sub(r"(?i)<li[^>]*>", "\n- ", text or "")
+    text = re.sub(r"(?i)<br\s*/?>|</?p[^>]*>|</div>|</li>|</?[uo]l[^>]*>", "\n", text)
+    text = html_lib.unescape(re.sub(r"<[^>]+>", " ", text))
+    out: list[str] = []
+    for line in text.splitlines():
+        m = _BULLET.match(line)
+        if bullets_only and not m:
+            continue
+        point = re.sub(r"\s+", " ", (m.group(1) if m else line)).strip(" -:")
+        if 3 <= len(point) <= 160 and point.lower() not in {o.lower() for o in out}:
+            out.append(point)
+    return out[:12]
+
+
+def load_agendas() -> dict:
+    try:
+        return json.loads(AGENDA_FILE.read_text())
+    except (OSError, ValueError):
+        return {}
+
+
+def save_agenda(event_id: str, points: list[str]) -> None:
+    data = {k: v for k, v in load_agendas().items()
+            if datetime.now(timezone.utc) - datetime.fromisoformat(v["at"]) < timedelta(days=30)}
+    if points:
+        data[event_id] = {"points": points, "at": datetime.now(timezone.utc).isoformat(timespec="seconds")}
+    else:
+        data.pop(event_id, None)
+    AGENDA_FILE.write_text(json.dumps(data, ensure_ascii=False, indent=1))
 
 
 def forget_call(folder: Path) -> None:
@@ -711,7 +751,8 @@ def upcoming(now: datetime | None = None) -> dict | None:
     return {"id": k, "title": v["title"], "start": v["start"].isoformat(),
             "in_s": round((v["start"] - now).total_seconds()), "meet": ctx.get("meet"),
             "type_label": type_label(ctx.get("type") or "other"), "mode": ctx.get("mode") or "other",
-            "join_at": (v["start"] - JOIN_BEFORE).isoformat(), "opened": (JOINED.get(k) or {}).get("how") == "opened"}
+            "join_at": (v["start"] - JOIN_BEFORE).isoformat(), "opened": (JOINED.get(k) or {}).get("how") == "opened",
+            "agenda": (load_agendas().get(k) or {}).get("points") or []}
 
 
 def join_tick(app: "App", settings: dict) -> None:
@@ -885,7 +926,8 @@ class Session:
         self.demo = None
         self.delays: list[float] = []                # end of speech -> line locked in, seconds
         self.finished = False
-        self.notice: dict | None = None   # how you told them you record: {"how": "said"|"chat", "at": s}
+        self.notice: dict | None = None   # how they were told you record: {"how": "said"|"chat"|"chat_auto", "at": s}
+        self.notice_fail = ""             # why the app could not write it in the meeting chat itself
         self.forgotten = False            # "Stop og slet": nothing of this call is kept
         self.transcriber = Transcriber(self) if whisper and feed is None else None
         self.consolidator = Consolidator(self) if self.transcriber else None
@@ -893,6 +935,37 @@ class Session:
             self.transcriber.start()
             self.consolidator.start()
         threading.Thread(target=self._prepare, daemon=True).start()
+
+    def add_agenda(self, points: list[str]) -> int:
+        """Your agenda points, into the checklist: Claude ticks them off from what is said (Danish or English) on
+        each turn, as it does its own items, and you can tick them by hand. Without the AI they are yours to tick."""
+        added = 0
+        with self.lock:
+            if self.plan is None:
+                self.plan = {"goal": None, "brief": None, "items": []}
+            mine = [it for it in self.plan["items"] if it.get("kind") == "agenda"]
+            have = {it["label"].lower() for it in mine}
+            for point in points:
+                if point.lower() in have:
+                    continue
+                iid = f"d{len(mine) + added + 1}"
+                self.plan["items"].append({"id": iid, "label": point, "say": "", "kind": "agenda"})
+                self.status[iid] = "open"
+                have.add(point.lower())
+                added += 1
+        return added
+
+    def set_item(self, iid: str, done: bool) -> None:
+        """You ticked a point (or took the tick away) yourself."""
+        with self.lock:
+            if iid in self.status:
+                self.status[iid] = "covered" if done else "open"
+                note = self.item_notes.setdefault(iid, {"got": "", "missing": ""})
+                note["missing"] = ""
+                if done:
+                    note["by"] = "you"
+                else:
+                    note.pop("by", None)
 
     def whisper_prompt(self) -> str:
         words = (load_settings().get("words") or []) + (self.ctx.get("words") or [])
@@ -953,8 +1026,9 @@ class Session:
 
     # ---- context + plan, once at the start
     def _prepare(self) -> None:
-        ready = {}
+        ready, event = {}, None
         try:
+            event = self.forced_event
             if self.forced_event is not None:
                 ctx = build_context(self.forced_event, self.started)
             else:
@@ -966,6 +1040,13 @@ class Session:
             ctx = dict(self.ctx, title="Unscheduled call")
         with self.lock:
             self.ctx = ctx
+        try:   # your agenda: pasted for this meeting before the call, else the list in the invite
+            ev = event or {}
+            points = (load_agendas().get(ev.get("id") or "") or {}).get("points") or agenda_points(ev.get("notes") or "", True)
+            if points and self.add_agenda(points):
+                log(f"agenda: {len(points)} points")
+        except Exception as e:  # noqa: BLE001
+            self.note(f"agenda not read: {e}")
         self.playbook = playbook(ctx["type"])
         log(f"call: {ctx['title']} | type {ctx['type']} ({ctx['type_source']}) | prep: {', '.join(ctx['prep_sources']) or 'none'}"
             + (" | brief prepared ahead" if ready.get("plan") else "") + f" | AI {self.how}")
@@ -981,8 +1062,10 @@ class Session:
         try:
             plan = ready.get("plan") or make_plan(ctx)
             with self.lock:
+                mine = [it for it in (self.plan or {}).get("items", []) if it.get("kind") == "agenda"]
+                plan = dict(plan, items=list(plan["items"]) + mine)   # a copy: the prepared plan stays as it was
+                self.status = {**{it["id"]: "open" for it in plan["items"]}, **{it["id"]: self.status.get(it["id"], "open") for it in mine}}
                 self.plan = plan
-                self.status = {it["id"]: "open" for it in plan["items"]}
                 self.ai_state = "on"
             log("plan: " + " | ".join(it["label"] for it in plan["items"]))
         except Exception as e:  # noqa: BLE001
@@ -1267,7 +1350,8 @@ class Session:
                 "ai": self.ai_state, "prep_sources": ctx.get("prep_sources") or [], "notes": self.notes,
                 "replay": bool(self.replay),
                 "notice": None if self.notice or not load_settings().get("notice", True) or self.replay
-                          else {"text": notice_text(self.how != "off")},
+                          else {"text": notice_text(self.how != "off"), "chat": not self.phone,
+                                "auto": not self.phone and load_settings().get("notice_auto", True), "fail": self.notice_fail},
             }
 
     def set_type(self, kind: str) -> None:
@@ -1632,11 +1716,30 @@ def make_handler(app: App):
                 self._json({})
             elif self.path.startswith("/settings"):
                 self._json(save_settings(body))
-            elif self.path.startswith("/notice"):   # you told them: said it, or pasted the line in the chat
+            elif urlparse(self.path).path == "/notice":   # they were told: you said it, pasted it, or the app wrote it
                 s = app.session
-                if s and body.get("how") in ("said", "chat"):
+                if s and body.get("how") in ("said", "chat", "chat_auto"):
                     s.notice = {"how": body["how"], "at": round(s.call_elapsed())}
                     log(f"recording notice: {body['how']} at {mmss(s.call_elapsed())}")
+                self._json({})
+            elif self.path.startswith("/notice_fail"):   # the app could not write in the chat: why, for the card
+                if app.session:
+                    app.session.notice_fail = str(body.get("why") or "")[:300]
+                    log(f"recording notice not written in the chat: {app.session.notice_fail}")
+                self._json({})
+            elif self.path.startswith("/agenda"):   # your agenda: for the call going on, or a coming meeting
+                points = agenda_points(str(body.get("text") or ""))
+                ev = str(body.get("event_id") or "")
+                if ev:
+                    save_agenda(ev, points)
+                    self._json({"saved": len(points)})
+                elif app.session:
+                    self._json({"added": app.session.add_agenda(points)})
+                else:
+                    self._json({"error": "no call and no meeting"}, 400)
+            elif self.path.startswith("/item"):   # you ticked a point yourself
+                if app.session:
+                    app.session.set_item(str(body.get("id") or ""), bool(body.get("done")))
                 self._json({})
             elif self.path.startswith("/forget"):   # "Stop og slet": the call going on now, nothing kept
                 s = app.session

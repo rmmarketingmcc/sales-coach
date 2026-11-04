@@ -13,8 +13,8 @@
 	<key>LSMinimumSystemVersion</key><string>14.4</string>
 	<key>LSUIElement</key><true/>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Sales Coach records your side of your online calls on this Mac, so the coach can follow the call.</string>
+	<string>Sales Coach optager din side af dine onlinemøder på din Mac, så coachen kan følge med i mødet.</string>
 	<key>NSAudioCaptureUsageDescription</key>
-	<string>Sales Coach records the other side of your online calls (the call audio) on this Mac, so the coach can follow the call.</string>
+	<string>Sales Coach optager den anden side af dine onlinemøder (lyden fra mødet) på din Mac, så coachen kan følge med i mødet.</string>
 </dict>
 </plist>

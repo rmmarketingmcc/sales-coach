@@ -175,6 +175,17 @@
   .cc .notice button.go { background: var(--brand); border-color: var(--brand); }
   .cc .forget, .cc .delcall, .cc .notice button.forget { color: var(--crit); border-color: currentColor; background: transparent; }
   .cc .gone { padding: 8px 10px; border-radius: 8px; background: var(--card); border: 1px solid var(--line); font-weight: 600; }
+  /* your own agenda: ticked by the coach from what is said, or by you */
+  .cc .mine { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+  .cc ul.mine li { display: block; padding: 0; border: 0; grid-template-columns: none; }
+  .cc .mine label { display: flex; gap: 8px; align-items: flex-start; cursor: pointer; font-weight: 600; }
+  .cc .mine input { margin-top: 3px; accent-color: var(--brand-ink); width: 16px; height: 16px; flex: none; }
+  .cc .mine li.covered label span { color: var(--faint); text-decoration: line-through; }
+  .cc .mine .by { font-size: 11px; color: var(--faint); margin-left: 24px; }
+  .cc .agin { display: grid; gap: 6px; margin-top: 8px; }
+  .cc .agin textarea { font: 13px/1.4 var(--font); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; resize: vertical; }
+  .cc .agin button { justify-self: start; font: 600 12px var(--font); border-radius: 6px; padding: 5px 12px; cursor: pointer; background: var(--brand); color: var(--ink); border: 0; }
+  .cc .notice .nfail { font-size: 12px; color: var(--crit); }
   #toast { position: fixed; left: 8px; right: 8px; bottom: 8px; z-index: 9; padding: 8px 10px; border-radius: 8px; background: var(--ink); color: #fff;
     font: 600 13px var(--font); opacity: 0; transition: opacity .2s; pointer-events: none; }
   #toast.show { opacity: 1; }
@@ -615,7 +626,8 @@ function controls(st) {
     <button type="button" id="power" class="${s.enabled ? "off" : "on"}">${s.enabled ? "Slå coachen fra" : "Slå coachen til"}</button>
     <div class="keep"><label for="keepa">Slet lyden</label><select id="keepa">${keepOpts([[0, "lige efter opkaldet"], [7, "efter 7 dage"], [30, "efter 30 dage"]], s.keep_audio_days ?? 7)}</select>
       <label for="keepn">Slet noter og udskrift</label><select id="keepn">${keepOpts([[30, "efter 30 dage"], [90, "efter 90 dage"], [365, "efter 1 år"], ["never", "aldrig"]], s.keep_notes_days ?? "never")}</select>
-      <label class="jn"><input type="checkbox" id="notice" ${s.notice !== false ? "checked" : ""}> Mind mig om at sige, at jeg optager</label></div></section>`;
+      <label class="jn"><input type="checkbox" id="notice" ${s.notice !== false ? "checked" : ""}> Fortæl dem, at jeg optager</label>
+      ${s.notice !== false ? `<label class="jn"><input type="checkbox" id="noticeauto" ${s.notice_auto !== false ? "checked" : ""}> Skriv det selv i Meet-chatten</label>` : ""}</div></section>`;
 }
 function keepOpts(list, cur) {
   return list.map(([v, l]) => `<option value="${v}" ${String(v) === String(cur) ? "selected" : ""}>${l}</option>`).join("");
@@ -632,13 +644,17 @@ function wireControls(st) {
   if (keepa) keepa.onchange = (e) => post({keep_audio_days: Number(e.target.value)});
   if (keepn) keepn.onchange = (e) => post({keep_notes_days: e.target.value});
   if (notice) notice.onchange = (e) => post({notice: e.target.checked});
+  const noticeAuto = $("#noticeauto");
+  if (noticeAuto) noticeAuto.onchange = (e) => post({notice_auto: e.target.checked});
   wireNotice();
 }
 
 // ---- telling the other side you record, and "Stop og slet" (GDPR)
 function noticeHtml(st, p, short) {   // short: the small window, the text is in the copy
-  if (!st.notice) return "";
-  return `<div class="notice" data-p="${p}"><b>Fortæl, at du optager</b>${short ? "" : `<div class="ntext">${esc(st.notice.text)}</div>`}
+  const n = st.notice;
+  if (!n) return "";
+  const head = n.auto && !n.fail ? "Skriver i mødets chat, at du optager..." : n.chat ? "Fortæl, at du optager" : "Sig, at du optager";
+  return `<div class="notice" data-p="${p}"><b>${head}</b>${n.fail ? `<div class="nfail">${esc(n.fail)}</div>` : ""}${short ? "" : `<div class="ntext">${esc(n.text)}</div>`}
     <div class="nbtns"><button type="button" class="go" id="ncopy">Kopiér til chatten</button><button type="button" id="nsaid">Jeg har sagt det</button>
     <button type="button" class="forget" data-forget="1">Stop og slet opkaldet</button></div></div>`;
 }
@@ -970,7 +986,7 @@ function render(st) {
   if (!st.active && !st.title && view !== "overview") { renderHistory(st); return; }
   historyHtml = "";
   if (compact()) { renderMini(st); return; }
-  if (!st.active && !st.title) { $("#app").innerHTML = tabs() + (st.forgotten ? `<section><div class="gone">Opkaldet er stoppet og slettet. Intet fra det er gemt.</div></section>` : "") + idle(st) + controls(st); wireTabs(); wireControls(st); wireFeedback(); fillUpNext(st); return; }
+  if (!st.active && !st.title) { $("#app").innerHTML = tabs() + (st.forgotten ? `<section><div class="gone">Opkaldet er stoppet og slettet. Intet fra det er gemt.</div></section>` : "") + idle(st) + nextAgendaHtml(st) + controls(st); wireTabs(); wireControls(st); wireFeedback(); wireAgenda(st.upcoming && st.upcoming.id); fillUpNext(st); return; }
   const t = st.target;
   const left = st.planned ? st.planned - st.elapsed : null;
   const clockCls = left == null ? "" : left < 0 ? "crit" : left <= 300 ? "warn" : "";
@@ -978,7 +994,8 @@ function render(st) {
   const cues = st.cues.length ? st.cues.map((c) => cueHtml(c)).join("")
     : `<div class="empty">På sporet. Bliv ved med at lytte.</div>`;
   // open: the line to ask; partly: "Delvist", what he said and what is missing; covered: what he said
-  const items = st.items.length ? `<ul>${st.items.map((i) => `<li class="${i.status}"><span class="dot ${i.status}"></span>
+  const coachItems = st.items.filter((i) => i.kind !== "agenda");
+  const items = coachItems.length ? `<ul>${coachItems.map((i) => `<li class="${i.status}"><span class="dot ${i.status}"></span>
       <div><div class="lbl">${i.status === "partly" ? `<span class="dl">Delvist</span>` : ""}${esc(i.label)}</div>${
         i.status === "open" || !i.got ? `<div class="say">${esc(i.say)}${i.why ? ` · ${esc(i.why)}` : ""}</div>` : ""}${
         i.got && i.status !== "open" ? `<div class="got">Svar: ${esc(i.got)}</div>` : ""}${
@@ -1008,6 +1025,7 @@ function render(st) {
     ${st.notice ? `<section>${noticeHtml(st, 1)}</section>` : ""}
     <section><h2>Nu</h2><div class="cues">${cues}</div>${nextAsk(st)}</section>
     ${st.brief ? `<section><details id="brief" ${(briefOpen ?? st.elapsed < 300) ? "open" : ""}><summary>Overblik</summary><div class="brief">${briefHtml(st.brief)}</div></details></section>` : ""}
+    ${agendaHtml(st.items.filter((i) => i.kind === "agenda"))}
     <section><h2>Tjekliste</h2>${st.goal ? `<div class="say" style="margin-bottom:8px">${esc(st.goal)}</div>` : ""}${items}</section>
     ${agenda ? `<section><h2>Dagsorden</h2>${agenda}</section>` : ""}
     <section><details ${openDetails ? "open" : ""} id="tx"><summary>Live transskription</summary><div class="lines">${lines}</div></details></section>
@@ -1016,12 +1034,48 @@ function render(st) {
       ${st.notes.map((n) => `<div>${esc(n)}</div>`).join("")}
       <div style="margin-top:6px"><button type="button" class="forget" data-forget="1">Stop og slet dette opkald</button></div></footer>${controls(st)}${linksBar(liveLinks(st))}`;
   wireControls(st);
+  wireAgenda();
   $("#type").onchange = (e) => {
     if (window.COPILOT_PREVIEW) return;
     fetch("/type", {method: "POST", body: JSON.stringify({type: e.target.value})}).catch(() => {});
   };
   $("#tx").ontoggle = (e) => { openDetails = e.target.open; };
   if ($("#brief")) $("#brief").ontoggle = (e) => { briefOpen = e.target.open; };
+}
+
+// ---- your own agenda: paste it (one point per line), the coach ticks it off from what is said, or you do
+let agendaOpen = false;
+function agendaHtml(mine) {
+  const list = mine.length ? `<ul class="mine">${mine.map((i) => `<li class="${i.status}"><label><input type="checkbox" data-item="${esc(i.id)}" ${i.status === "covered" ? "checked" : ""}>
+      <span>${i.status === "partly" ? `<span class="dl">Delvist</span>` : ""}${esc(i.label)}</span></label>${
+      i.status === "covered" ? `<div class="by">${i.by === "you" ? "afkrydset af dig" : "afkrydset af coachen"}${i.got ? `: ${esc(i.got)}` : ""}</div>` : ""}</li>`).join("")}</ul>` : "";
+  const input = `<div class="agin"><textarea id="agendatext" rows="3" placeholder="Ét punkt pr. linje"></textarea><button type="button" id="agendaadd">Tilføj</button></div>`;
+  return `<section><h2>Din dagsorden</h2>${list}${mine.length
+    ? `<details id="agmore" ${agendaOpen ? "open" : ""}><summary class="sub">Tilføj punkter</summary>${input}</details>`
+    : `<div class="sub">Sæt din dagsorden ind, så krydser coachen punkterne af, mens I taler. Du kan også selv krydse af.</div>${input}`}</section>`;
+}
+function wireAgenda(eventId) {
+  const add = $("#agendaadd"), text = $("#agendatext"), more = $("#agmore");
+  if (more) more.ontoggle = (e) => { agendaOpen = e.target.open; };
+  if (add) add.onclick = async () => {
+    const body = {text: text.value};
+    if (eventId) body.event_id = eventId;
+    const r = await (await fetch("/agenda", {method: "POST", body: JSON.stringify(body)})).json().catch(() => ({}));
+    text.value = "";
+    text.blur();
+    toast(eventId ? `Gemt: ${r.saved || 0} punkter til mødet` : `Tilføjet: ${r.added || 0} punkter`);
+    tick();
+  };
+  document.querySelectorAll("[data-item]").forEach((c) => c.onchange = () =>
+    fetch("/item", {method: "POST", body: JSON.stringify({id: c.dataset.item, done: c.checked})}).then(tick).catch(() => {}));
+}
+// before the call: the agenda for the next meeting, saved until it starts
+function nextAgendaHtml(st) {
+  const u = st.upcoming;
+  if (!u || (st.settings && st.settings.enabled === false)) return "";
+  const have = u.agenda || [];
+  return `<section><h2>Dagsorden til ${esc(u.title)}</h2>${have.length ? `<ul class="mine">${have.map((a) => `<li><span>${esc(a)}</span></li>`).join("")}</ul>` : ""}
+    <div class="agin"><textarea id="agendatext" rows="3" placeholder="Ét punkt pr. linje. Coachen krydser dem af under mødet.">${esc(have.join("\n"))}</textarea><button type="button" id="agendaadd">Gem</button></div></section>`;
 }
 
 function markMore() {
@@ -1031,7 +1085,7 @@ function markMore() {
 async function tick() {
   try {
     // don't redraw under an open menu or while feedback is being typed
-    if (document.activeElement && ["type", "auto", "fbnote"].includes(document.activeElement.id)) return;
+    if (document.activeElement && ["type", "auto", "fbnote", "agendatext", "keepa", "keepn"].includes(document.activeElement.id)) return;
     render(await (await fetch(document.visibilityState === "hidden" ? "/state?hidden=1" : "/state", {cache: "no-store"})).json());
     markMore();
   } catch (e) {

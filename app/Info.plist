@@ -13,9 +13,11 @@
 	<key>LSMinimumSystemVersion</key><string>14.4</string>
 	<key>NSHighResolutionCapable</key><true/>
 	<key>NSCalendarsFullAccessUsageDescription</key>
-	<string>Sales Coach reads your calendar on this Mac to know your meetings: who you meet, the agenda and when it ends. Nothing leaves your Mac except, with the AI on, to your own Claude.</string>
+	<string>Sales Coach læser kalenderen på din Mac for at kende dine møder: hvem du mødes med, dagsordenen og hvornår mødet slutter. Intet forlader din Mac, undtagen til din egen Claude, når AI'en er slået til.</string>
 	<key>NSCalendarsUsageDescription</key>
-	<string>Sales Coach reads your calendar on this Mac to know your meetings: who you meet, the agenda and when it ends. Nothing leaves your Mac except, with the AI on, to your own Claude.</string>
+	<string>Sales Coach læser kalenderen på din Mac for at kende dine møder: hvem du mødes med, dagsordenen og hvornår mødet slutter. Intet forlader din Mac, undtagen til din egen Claude, når AI'en er slået til.</string>
+	<key>NSAppleEventsUsageDescription</key>
+	<string>Sales Coach skriver i chatten i dit Google Meet-møde, at du optager, så du ikke selv skal huske det.</string>
 	<!-- the window is served by the coach on 127.0.0.1 over plain http -->
 	<key>NSAppTransportSecurity</key>
 	<dict><key>NSAllowsLocalNetworking</key><true/></dict>

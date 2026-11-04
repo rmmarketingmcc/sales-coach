@@ -125,6 +125,120 @@ final class CalendarFeed {
     }
 }
 
+// MARK: - Telling them you record, in the meeting's chat
+
+/// Writes the recording notice in a Google Meet call's chat from your own seat, the way a recording bot announces
+/// itself, but without a bot: Sales Coach finds the Meet tab in Chrome, Brave, Edge or Safari, opens the chat,
+/// types the message and sends it, then checks it went out. It needs the browser's "Allow JavaScript from Apple
+/// Events" (once, in its Developer menu) and macOS's permission for Sales Coach to control the browser (asked
+/// once). Zoom, Teams and the rest: the window's "Kopiér til chatten" instead.
+enum ChatNotice {
+    static let chromes = ["com.google.chrome": "Google Chrome", "com.brave.browser": "Brave Browser", "com.microsoft.edgemac": "Microsoft Edge"]
+
+    static func jsString(_ s: String) -> String {
+        let data = try? JSONSerialization.data(withJSONObject: [s])
+        let arr = data.flatMap { String(data: $0, encoding: .utf8) } ?? "[\"\"]"
+        return String(arr.dropFirst().dropLast())   // "...", JSON-escaped
+    }
+
+    static func appleScript(_ s: String) -> String {
+        "\"" + s.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"") + "\""
+    }
+
+    /// The three steps in the page: open the chat if it is closed, type and send, check it went out.
+    static func steps(_ text: String) -> [String] {
+        let msg = jsString(text), probe = jsString(String(text.prefix(30)))
+        return [
+            "(function(){var b=document.querySelector('textarea');if(b&&b.offsetParent)return 'open';var c=Array.prototype.find.call(document.querySelectorAll('button[aria-label],[role=\"button\"][aria-label]'),function(e){var l=e.getAttribute('aria-label')||'';return /chat/i.test(l)&&!/(luk|close)/i.test(l);});if(!c)return 'no chat button';c.click();return 'opened';})()",
+            "(function(){var m=\(msg);var b=document.querySelector('textarea');if(!b)return 'no chat box';b.focus();var ok=document.execCommand&&document.execCommand('insertText',false,m);if(!ok||b.value.indexOf(m.slice(0,20))<0){Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype,'value').set.call(b,m);b.dispatchEvent(new Event('input',{bubbles:true}));}var p=b,s=null;for(var i=0;i<8&&p&&!s;i++){p=p.parentElement;if(p)s=Array.prototype.find.call(p.querySelectorAll('button[aria-label]'),function(e){return /send/i.test(e.getAttribute('aria-label')||'')&&!e.disabled;});}if(s){s.click();return 'sent';}b.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',code:'Enter',keyCode:13,which:13,bubbles:true}));return 'entered';})()",
+            "(function(){var b=document.querySelector('textarea');return (document.body.innerText.indexOf(\(probe))>=0&&(!b||b.value.length===0))?'ok':'not sent';})()",
+        ]
+    }
+
+    /// (written, why not) for the call going on now.
+    static func post(_ text: String) -> (Bool, String) {
+        let running = Set(NSWorkspace.shared.runningApplications.compactMap { $0.bundleIdentifier?.lowercased() })
+        let js = steps(text).map(appleScript)
+        var tried = false
+        for (bundle, name) in chromes where running.contains(bundle) {
+            tried = true
+            let script = """
+            tell application "\(name)"
+              repeat with w in windows
+                repeat with t in tabs of w
+                  if (URL of t) contains "meet.google.com/" and (URL of t) does not end with "meet.google.com/" then
+                    set r1 to execute t javascript \(js[0])
+                    delay 1.2
+                    set r2 to execute t javascript \(js[1])
+                    delay 1.5
+                    set r3 to execute t javascript \(js[2])
+                    return r1 & "|" & r2 & "|" & r3
+                  end if
+                end repeat
+              end repeat
+              return "no meet tab"
+            end tell
+            """
+            let (out, err) = run(script)
+            if out.hasSuffix("|ok") { return (true, "") }
+            if out != "no meet tab" { return (false, explain(out, err, name)) }
+        }
+        if running.contains("com.apple.safari") {
+            tried = true
+            let script = """
+            tell application "Safari"
+              repeat with w in windows
+                repeat with t in tabs of w
+                  if (URL of t) contains "meet.google.com/" and (URL of t) does not end with "meet.google.com/" then
+                    set r1 to do JavaScript \(js[0]) in t
+                    delay 1.2
+                    set r2 to do JavaScript \(js[1]) in t
+                    delay 1.5
+                    set r3 to do JavaScript \(js[2]) in t
+                    return r1 & "|" & r2 & "|" & r3
+                  end if
+                end repeat
+              end repeat
+              return "no meet tab"
+            end tell
+            """
+            let (out, err) = run(script)
+            if out.hasSuffix("|ok") { return (true, "") }
+            if out != "no meet tab" { return (false, explain(out, err, "Safari")) }
+        }
+        _ = tried
+        return (false, "Kun et Google Meet-møde i Chrome, Brave, Edge eller Safari kan få beskeden skrevet af sig selv. Kopiér den til chatten.")
+    }
+
+    static func explain(_ out: String, _ err: String, _ browser: String) -> String {
+        let e = err.lowercased()
+        if e.contains("apple events") || e.contains("javascript via applescript") || e.contains("javascript through applescript")
+            || e.contains("allow javascript") {
+            return browser == "Safari"
+                ? "Slå det til én gang i Safari: Udvikler > Tillad JavaScript fra Apple Events. Indtil da: Kopiér til chatten."
+                : "Slå det til én gang i \(browser): Se > Udvikler > Tillad JavaScript via Apple Events. Indtil da: Kopiér til chatten."
+        }
+        if e.contains("-1743") || e.contains("not authorized") || e.contains("ikke tilladelse") {
+            return "Giv Sales Coach lov til at styre \(browser): Systemindstillinger > Anonymitet og sikkerhed > Automatisering. Indtil da: Kopiér til chatten."
+        }
+        return "Beskeden kom ikke ud i chatten (\(out.isEmpty ? String(err.prefix(120)) : out)). Kopiér den til chatten."
+    }
+
+    static func run(_ script: String) -> (String, String) {
+        let p = Process()
+        p.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
+        p.arguments = ["-e", script]
+        let out = Pipe(), err = Pipe()
+        p.standardOutput = out
+        p.standardError = err
+        do { try p.run() } catch { return ("", "\(error)") }
+        p.waitUntilExit()
+        let o = String(data: out.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+        let e = String(data: err.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+        return (o.trimmingCharacters(in: .whitespacesAndNewlines), e.trimmingCharacters(in: .whitespacesAndNewlines))
+    }
+}
+
 // MARK: - App
 
 // A panel can be typed in (feedback box) without activating the app; the app is then not active, so
@@ -146,6 +260,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
     var callKey = ""                    // the call the window was last placed for
     var upcoming: [String: Any]? = nil  // the next meeting between calls (title, in_s, meet), from the poll
     var inCall = false                  // a call going on, from the poll
+    var noticeTried: Set<String> = []   // calls the chat message was tried for (once per call)
 
     var zoom: Double {
         get { prefs.object(forKey: "zoom") as? Double ?? 1.0 }
@@ -295,7 +410,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
         keepNotes.submenu = notesMenu
         menu.addItem(keepNotes)
         let notice = (settings["notice"] as? Bool) ?? true
-        menu.addItem(entry("Mind mig om at sige, at jeg optager", #selector(toggleNotice), on: notice))
+        menu.addItem(entry("Fortæl dem, at jeg optager", #selector(toggleNotice), on: notice))
+        if notice {
+            let auto = (settings["notice_auto"] as? Bool) ?? true
+            menu.addItem(entry("    Skriv det selv i Meet-chatten", #selector(toggleNoticeAuto), on: auto))
+        }
         if inCall {
             menu.addItem(entry("Stop og slet dette opkald...", #selector(forgetCall)))
         }
@@ -348,6 +467,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
     @objc func setKeep(_ sender: NSMenuItem) {
         if let change = sender.representedObject as? [String: Any] { post("/settings", change) }
     }
+    @objc func toggleNoticeAuto() { post("/settings", ["notice_auto": !((settings["notice_auto"] as? Bool) ?? true)]) }
+    func note(_ msg: String) { post("/note", ["msg": msg]) }
     @objc func toggleNotice() { post("/settings", ["notice": !((settings["notice"] as? Bool) ?? true)]) }
 
     // The other side said no, or you changed your mind: the recording stops and nothing of the call is kept.
@@ -374,15 +495,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
     @objc func reportProblem() {
         let os = ProcessInfo.processInfo.operatingSystemVersionString
         URLSession.shared.dataTask(with: URL(string: "\(base)/health")!) { data, _, _ in
-            var coach = "not answering"
+            var coach = "svarer ikke"
             if let data, let h = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
                 let s = h["settings"] as? [String: Any] ?? [:]
-                coach = "\(h["version"] ?? "?"), AI \(h["ai"] ?? "?"), in a call: \(h["call"] ?? "?"), "
-                    + "language \(s["language"] ?? "?"), on: \(s["enabled"] ?? "?"), opens: \(s["auto_open"] ?? "?"), "
-                    + "add-ons: \((s["addons"] as? [Any])?.count ?? 0)"
+                coach = "\(h["version"] ?? "?"), AI \(h["ai"] ?? "?"), i et opkald: \(h["call"] ?? "?"), "
+                    + "sprog \(s["language"] ?? "?"), slået til: \(s["enabled"] ?? "?"), åbner: \(s["auto_open"] ?? "?"), "
+                    + "tilføjelser: \((s["addons"] as? [Any])?.count ?? 0)"
             }
-            let body = "What happened:\n\n\nWhat you expected:\n\n\n---\nSales Coach \(appVersion), macOS \(os)\n"
-                + "Calendar access: \(self.calendar.allowed ? "yes" : "no")\nCoach: \(coach)\n"
+            let body = "Hvad skete der:\n\n\nHvad forventede du:\n\n\n---\nSales Coach \(appVersion), macOS \(os)\n"
+                + "Adgang til Kalender: \(self.calendar.allowed ? "ja" : "nej")\nCoach: \(coach)\n"
             var parts = URLComponents(url: issuesURL, resolvingAgainstBaseURL: false)!
             parts.queryItems = [URLQueryItem(name: "body", value: body)]
             DispatchQueue.main.async { if let url = parts.url { NSWorkspace.shared.open(url) } }
@@ -411,11 +532,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
             var newCall: String? = nil
             var up: [String: Any]? = nil
             var inCall = false
+            var chatNotice: (call: String, text: String)? = nil
             let mm = { (s: Int) in "\(s / 60):" + String(format: "%02d", s % 60) }
             if let data, let st = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
                 settings = st["settings"] as? [String: Any]
                 up = st["upcoming"] as? [String: Any]
                 inCall = (st["active"] as? Bool) == true
+                if inCall, (st["confirmed"] as? Bool) == true, let n = st["notice"] as? [String: Any], (n["auto"] as? Bool) == true,
+                   let call = st["call_id"] as? String, let text = n["text"] as? String {
+                    chatNotice = (call, text)
+                }
                 if inCall {
                     let share = (st["share"] as? Int).map { "\($0)%" } ?? "live"
                     title = "● \(share)"
@@ -456,6 +582,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
                 if let settings { self.settings = settings }
                 self.upcoming = up
                 self.inCall = inCall
+                if let chatNotice, !self.noticeTried.contains(chatNotice.call) {
+                    self.noticeTried.insert(chatNotice.call)
+                    DispatchQueue.global(qos: .userInitiated).async {
+                        let (ok, why) = ChatNotice.post(chatNotice.text)
+                        DispatchQueue.main.async {
+                            if ok { self.post("/notice", ["how": "chat_auto"]) } else { self.post("/notice_fail", ["why": why]) }
+                            self.note(ok ? "recording notice written in the Meet chat" : "recording notice not written: \(why)")
+                        }
+                    }
+                }
                 // A new call: open next to it. A call already placed is left where you moved it.
                 if let newCall, newCall != self.callKey, (self.settings["auto_open"] as? String) != "never" {
                     self.callKey = newCall
@@ -548,6 +684,26 @@ extension NSFont {
     func withWeight(_ weight: NSFont.Weight) -> NSFont {
         NSFont.systemFont(ofSize: pointSize, weight: weight)
     }
+}
+
+// --chat-js <text>: the chat steps and their AppleScript quoting, as JSON (tests/chat_notice_test.py checks them)
+if let i = CommandLine.arguments.firstIndex(of: "--chat-js"), i + 1 < CommandLine.arguments.count {
+    let steps = ChatNotice.steps(CommandLine.arguments[i + 1])
+    let out: [String: Any] = ["steps": steps, "quoted": steps.map(ChatNotice.appleScript)]
+    print(String(data: try! JSONSerialization.data(withJSONObject: out), encoding: .utf8)!)
+    exit(0)
+}
+
+// --ask-browser: macOS asks once for Sales Coach to control the browsers that are open, so the question comes at
+// install and not in the middle of the first meeting (writing in the Meet chat needs it)
+if CommandLine.arguments.contains("--ask-browser") {
+    let running = Set(NSWorkspace.shared.runningApplications.compactMap { $0.bundleIdentifier?.lowercased() })
+    for (bundle, name) in ChatNotice.chromes.merging(["com.apple.safari": "Safari"], uniquingKeysWith: { a, _ in a })
+        where running.contains(bundle) {
+        let (_, err) = ChatNotice.run("tell application \"\(name)\" to count windows")
+        print("\(name): \(err.isEmpty ? "ok" : err)")
+    }
+    exit(0)
 }
 
 // --export-calendar: write calendar.json once and quit (the installer's check that Calendar access works)
