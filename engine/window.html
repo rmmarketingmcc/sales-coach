@@ -165,6 +165,19 @@
   .cc .controls button.off { background: var(--card); color: var(--ink); border: 1px solid var(--line); }
   .cc .controls button.on { background: var(--brand); color: var(--ink); border: 0; }
   .cc .controls button:focus-visible { outline: 2px solid var(--brand); outline-offset: 1px; }
+  .cc .controls .keep { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; width: 100%; }
+  /* telling the other side you record (GDPR): first thing on screen until it is done */
+  .cc .notice { display: grid; gap: 6px; padding: 8px 10px; border-radius: 8px; background: var(--brand-soft); border: 1px solid var(--brand); }
+  .cc .notice b { font-size: 14px; }
+  .cc .notice .ntext { font-size: 12px; color: var(--muted); }
+  .cc .notice .nbtns { display: flex; flex-wrap: wrap; gap: 6px; }
+  .cc .notice button, .cc .forget, .cc .delcall { font: 600 12px var(--font); border-radius: 6px; padding: 5px 10px; cursor: pointer; border: 1px solid var(--line); background: var(--card); color: var(--ink); }
+  .cc .notice button.go { background: var(--brand); border-color: var(--brand); }
+  .cc .forget, .cc .delcall, .cc .notice button.forget { color: var(--crit); border-color: currentColor; background: transparent; }
+  .cc .gone { padding: 8px 10px; border-radius: 8px; background: var(--card); border: 1px solid var(--line); font-weight: 600; }
+  #toast { position: fixed; left: 8px; right: 8px; bottom: 8px; z-index: 9; padding: 8px 10px; border-radius: 8px; background: var(--ink); color: #fff;
+    font: 600 13px var(--font); opacity: 0; transition: opacity .2s; pointer-events: none; }
+  #toast.show { opacity: 1; }
   .cc .notes h2 { margin-top: 10px; color: var(--ink); }
   .cc .notes p { margin: 0 0 6px; font-size: 13px; }
   .cc .notes-list { display: grid; gap: 4px; margin-bottom: 6px; }
@@ -598,8 +611,14 @@ function controls(st) {
   const labels = st.auto_open_labels || {all: "Ved hvert opkald"};
   const opts = Object.entries(labels).map(([k, v]) => `<option value="${k}" ${k === s.auto_open ? "selected" : ""}>${esc(v)}</option>`).join("");
   return `<section class="controls"><label for="auto">Åbner selv</label><select id="auto">${opts}</select>
-    <label class="jn"><input type="checkbox" id="join" ${s.auto_join !== false ? "checked" : ""}> Åbn Meet 2 min før</label>
-    <button type="button" id="power" class="${s.enabled ? "off" : "on"}">${s.enabled ? "Slå coachen fra" : "Slå coachen til"}</button></section>`;
+    <label class="jn"><input type="checkbox" id="join" ${s.auto_join !== false ? "checked" : ""}> Åbn mødelinket 2 min før</label>
+    <button type="button" id="power" class="${s.enabled ? "off" : "on"}">${s.enabled ? "Slå coachen fra" : "Slå coachen til"}</button>
+    <div class="keep"><label for="keepa">Slet lyden</label><select id="keepa">${keepOpts([[0, "lige efter opkaldet"], [7, "efter 7 dage"], [30, "efter 30 dage"]], s.keep_audio_days ?? 7)}</select>
+      <label for="keepn">Slet noter og udskrift</label><select id="keepn">${keepOpts([[30, "efter 30 dage"], [90, "efter 90 dage"], [365, "efter 1 år"], ["never", "aldrig"]], s.keep_notes_days ?? "never")}</select>
+      <label class="jn"><input type="checkbox" id="notice" ${s.notice !== false ? "checked" : ""}> Mind mig om at sige, at jeg optager</label></div></section>`;
+}
+function keepOpts(list, cur) {
+  return list.map(([v, l]) => `<option value="${v}" ${String(v) === String(cur) ? "selected" : ""}>${l}</option>`).join("");
 }
 
 function wireControls(st) {
@@ -609,6 +628,51 @@ function wireControls(st) {
   if (auto) auto.onchange = (e) => post({auto_open: e.target.value});
   if (join) join.onchange = (e) => post({auto_join: e.target.checked});
   if (power) power.onclick = () => post({enabled: !s.enabled});
+  const keepa = $("#keepa"), keepn = $("#keepn"), notice = $("#notice");
+  if (keepa) keepa.onchange = (e) => post({keep_audio_days: Number(e.target.value)});
+  if (keepn) keepn.onchange = (e) => post({keep_notes_days: e.target.value});
+  if (notice) notice.onchange = (e) => post({notice: e.target.checked});
+  wireNotice();
+}
+
+// ---- telling the other side you record, and "Stop og slet" (GDPR)
+function noticeHtml(st, p, short) {   // short: the small window, the text is in the copy
+  if (!st.notice) return "";
+  return `<div class="notice" data-p="${p}"><b>Fortæl, at du optager</b>${short ? "" : `<div class="ntext">${esc(st.notice.text)}</div>`}
+    <div class="nbtns"><button type="button" class="go" id="ncopy">Kopiér til chatten</button><button type="button" id="nsaid">Jeg har sagt det</button>
+    <button type="button" class="forget" data-forget="1">Stop og slet opkaldet</button></div></div>`;
+}
+function toast(text) {
+  let t = $("#toast");
+  if (!t) { t = document.createElement("div"); t.id = "toast"; document.body.appendChild(t); }
+  t.textContent = text;
+  t.classList.add("show");
+  clearTimeout(t._h);
+  t._h = setTimeout(() => t.classList.remove("show"), 6000);
+}
+async function copyText(text) {
+  try { await navigator.clipboard.writeText(text); return; } catch (e) { /* the app's own clipboard below */ }
+  try { window.webkit.messageHandlers.copilot.postMessage({copy: text}); } catch (e) { /* a browser tab */ }
+}
+function wireNotice() {
+  const send = (how) => window.COPILOT_PREVIEW ? null : fetch("/notice", {method: "POST", body: JSON.stringify({how})}).then(tick).catch(() => {});
+  const copy = $("#ncopy"), said = $("#nsaid");
+  if (copy) copy.onclick = async () => {
+    await copyText((lastState.notice || {}).text || "");
+    toast("Kopieret. Sæt den ind i mødets chat med ⌘V");
+    send("chat");
+  };
+  if (said) said.onclick = () => send("said");
+  document.querySelectorAll("[data-forget]").forEach((b) => b.onclick = () => {
+    if (!confirm("Stop optagelsen og slet alt fra dette opkald? Lyd, udskrift og noter. Det kan ikke fortrydes.")) return;
+    if (!window.COPILOT_PREVIEW) fetch("/forget", {method: "POST", body: "{}"}).then(tick).catch(() => {});
+  });
+  const del = $("#delcall");
+  if (del) del.onclick = async () => {
+    if (!confirm("Slet dette opkald? Lyd, udskrift, noter og coachens vurdering. Det kan ikke fortrydes.")) return;
+    await fetch("/delete_call", {method: "POST", body: JSON.stringify({call: del.dataset.call})}).catch(() => {});
+    view = "calls"; detailCache = null; await loadCalls(true); render(lastState);
+  };
 }
 
 function nextCall(n) {
@@ -661,6 +725,7 @@ function renderMini(st) {
          <div class="m-brief"><b>${esc((n.brief || {}).who || n.title)}</b>${(n.brief || {}).goal ? `<br>Mål: ${esc(n.brief.goal)}` : ""}${((n.brief || {}).unanswered || []).slice(0, 2).map((u) => `<br>Åbent: ${esc(u)}`).join("")}</div>
          ${(n.ready || []).length ? `<div class="rds">${readyChips(n.ready)}</div>` : ""}
          ${(n.links || []).length ? `<div class="sub links">${links(n)}</div>` : ""}`
+      : st.forgotten ? `<div class="gone">Opkaldet er stoppet og slettet. Intet fra det er gemt.</div>`
       : !l ? `${dayPlanMini(st.readiness)}<div class="empty">Venter på et opkald. Åbner selv, når et starter.</div>`
       : `${dayPlanMini(st.readiness)}
          <div class="m-top"><span>Sidste opkald</span><span class="m-type">${esc(l.title)}</span></div>
@@ -690,6 +755,7 @@ function renderMini(st) {
     ${countdown(st)}
     <div class="m-talk">${avatar(st)}<span class="m-pct ${shareClass(st.share, t)}">${st.share ?? "--"}%</span>
       <div class="bar m-bar">${t ? `<div class="band" style="left:${t[0]}%;width:${t[1] - t[0]}%"></div>` : ""}<div class="fill" style="width:${st.share ?? 0}%"></div>${st.share5 != null ? `<div class="fill5" style="left:${st.share5}%"></div>` : ""}</div></div>
+    ${noticeHtml(st, 1, true)}
     ${st.stretch >= 30 && !talkCue ? `<div class="stretch" data-p="7">Dig: ${mmss(st.stretch)} i træk</div>` : ""}
     ${cues.map((c, i) => cueHtml(c, i ? 5 : 2)).join("")
       || (st.brief && st.elapsed < 240 ? `<div class="m-brief" data-p="6"><b>${esc(st.brief.who || st.title)}</b>${st.brief.goal ? `<br>Mål: ${esc(st.brief.goal)}` : ""}</div>` : "")}
@@ -698,6 +764,7 @@ function renderMini(st) {
     ${lastLine(st)}
     ${linksBar(liveLinks(st), 6)}
   </div>`;
+  wireNotice();
   fit();
 }
 
@@ -880,6 +947,7 @@ function callHtml() {
     ${c.coached ? debriefHtml(c) + feedbackBox(c)
       : `<section><div class="empty">Coachen var ikke med på dette opkald, så der er ingen vurdering. Taletiden er fra optagelsen, noterne fra transskriptionen.</div></section>`}
     ${c.notes ? `<section class="notes"><h2>Noter</h2>${md(c.notes)}</section>` : ""}
+    <section><button type="button" class="delcall" id="delcall" data-call="${esc(c.id)}">Slet opkaldet</button></section>
     ${linksBar([...(c.links || []), ...extra])}`;
 }
 function renderHistory(st) {
@@ -890,6 +958,7 @@ function renderHistory(st) {
     $("#app").innerHTML = html;
     wireTabs();
     wireFeedback();
+    wireNotice();
     markMore();
   }
   fillUpNext(st);   // the countdown ticks on its own, without redrawing the list under it
@@ -901,7 +970,7 @@ function render(st) {
   if (!st.active && !st.title && view !== "overview") { renderHistory(st); return; }
   historyHtml = "";
   if (compact()) { renderMini(st); return; }
-  if (!st.active && !st.title) { $("#app").innerHTML = tabs() + idle(st) + controls(st); wireTabs(); wireControls(st); wireFeedback(); fillUpNext(st); return; }
+  if (!st.active && !st.title) { $("#app").innerHTML = tabs() + (st.forgotten ? `<section><div class="gone">Opkaldet er stoppet og slettet. Intet fra det er gemt.</div></section>` : "") + idle(st) + controls(st); wireTabs(); wireControls(st); wireFeedback(); fillUpNext(st); return; }
   const t = st.target;
   const left = st.planned ? st.planned - st.elapsed : null;
   const clockCls = left == null ? "" : left < 0 ? "crit" : left <= 300 ? "warn" : "";
@@ -936,6 +1005,7 @@ function render(st) {
         <div class="fill" style="width:${st.share ?? 0}%"></div>${st.share5 != null ? `<div class="fill5" style="left:${st.share5}%"></div>` : ""}</div>
       ${st.stretch >= 30 && !st.cues.some((c) => c.kind === "talk") ? `<div class="stretch">Dig: ${mmss(st.stretch)} i træk</div>` : ""}
     </section>
+    ${st.notice ? `<section>${noticeHtml(st, 1)}</section>` : ""}
     <section><h2>Nu</h2><div class="cues">${cues}</div>${nextAsk(st)}</section>
     ${st.brief ? `<section><details id="brief" ${(briefOpen ?? st.elapsed < 300) ? "open" : ""}><summary>Overblik</summary><div class="brief">${briefHtml(st.brief)}</div></details></section>` : ""}
     <section><h2>Tjekliste</h2>${st.goal ? `<div class="say" style="margin-bottom:8px">${esc(st.goal)}</div>` : ""}${items}</section>
@@ -943,7 +1013,8 @@ function render(st) {
     <section><details ${openDetails ? "open" : ""} id="tx"><summary>Live transskription</summary><div class="lines">${lines}</div></details></section>
     <footer><div>AI-stikord: ${esc(aiDa(st.ai))}${st.lag != null ? ` · linjer ${st.lag} sek. efter tale` : ""}${st.replay ? " · genafspilning" : ""}</div>
       <div>Forberedelse: ${esc(st.prep_sources.map((x) => PREP_DA[x] || x).join(", ") || "intet fundet")}</div>
-      ${st.notes.map((n) => `<div>${esc(n)}</div>`).join("")}</footer>${controls(st)}${linksBar(liveLinks(st))}`;
+      ${st.notes.map((n) => `<div>${esc(n)}</div>`).join("")}
+      <div style="margin-top:6px"><button type="button" class="forget" data-forget="1">Stop og slet dette opkald</button></div></footer>${controls(st)}${linksBar(liveLinks(st))}`;
   wireControls(st);
   $("#type").onchange = (e) => {
     if (window.COPILOT_PREVIEW) return;
@@ -964,7 +1035,7 @@ async function tick() {
     render(await (await fetch(document.visibilityState === "hidden" ? "/state?hidden=1" : "/state", {cache: "no-store"})).json());
     markMore();
   } catch (e) {
-    $("#app").innerHTML = `<div class="idle">Coachen kører ikke.<br>python3 scripts/call_copilot.py serve</div>`;
+    $("#app").innerHTML = `<div class="idle">Coachen kører ikke lige nu.<br>Den starter selv igen om lidt. Ellers: kør installationslinjen igen.</div>`;
   }
 }
 if (window.COPILOT_PREVIEW) {

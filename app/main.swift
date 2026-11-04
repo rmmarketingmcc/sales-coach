@@ -145,6 +145,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
     var settings: [String: Any] = [:]   // the coach's switches, from the poll
     var callKey = ""                    // the call the window was last placed for
     var upcoming: [String: Any]? = nil  // the next meeting between calls (title, in_s, meet), from the poll
+    var inCall = false                  // a call going on, from the poll
 
     var zoom: Double {
         get { prefs.object(forKey: "zoom") as? Double ?? 1.0 }
@@ -275,6 +276,29 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
         menu.addItem(auto)
         let join = (settings["auto_join"] as? Bool) ?? true
         menu.addItem(entry("Åbn mødelinket 2 min før næste møde", #selector(toggleJoin), on: join))
+        // how long calls are kept, and telling the other side you record (GDPR)
+        let audioDays = (settings["keep_audio_days"] as? Int) ?? 7
+        let keepAudio = entry("Slet lyden", nil)
+        let audioMenu = NSMenu()
+        for (days, label) in [(0, "Lige efter opkaldet"), (7, "Efter 7 dage"), (30, "Efter 30 dage")] {
+            audioMenu.addItem(entry(label, #selector(setKeep(_:)), on: audioDays == days, tag: ["keep_audio_days": days]))
+        }
+        keepAudio.submenu = audioMenu
+        menu.addItem(keepAudio)
+        let notesDays = settings["keep_notes_days"] as? Int   // nil: never
+        let keepNotes = entry("Slet noter og udskrift", nil)
+        let notesMenu = NSMenu()
+        for (days, label) in [(30, "Efter 30 dage"), (90, "Efter 90 dage"), (365, "Efter 1 år"), (0, "Aldrig")] {
+            let on = days == 0 ? notesDays == nil : notesDays == days
+            notesMenu.addItem(entry(label, #selector(setKeep(_:)), on: on, tag: ["keep_notes_days": days == 0 ? "never" as Any : days as Any]))
+        }
+        keepNotes.submenu = notesMenu
+        menu.addItem(keepNotes)
+        let notice = (settings["notice"] as? Bool) ?? true
+        menu.addItem(entry("Mind mig om at sige, at jeg optager", #selector(toggleNotice), on: notice))
+        if inCall {
+            menu.addItem(entry("Stop og slet dette opkald...", #selector(forgetCall)))
+        }
         if !calendar.allowed {
             menu.addItem(entry("Giv adgang til Kalender (så coachen kender dine møder)...", #selector(openCalendarAccess)))
         }
@@ -320,6 +344,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
         if let link = sender.representedObject as? String, let url = URL(string: link) { NSWorkspace.shared.open(url) }
     }
     @objc func toggleJoin() { post("/settings", ["auto_join": !((settings["auto_join"] as? Bool) ?? true)]) }
+
+    @objc func setKeep(_ sender: NSMenuItem) {
+        if let change = sender.representedObject as? [String: Any] { post("/settings", change) }
+    }
+    @objc func toggleNotice() { post("/settings", ["notice": !((settings["notice"] as? Bool) ?? true)]) }
+
+    // The other side said no, or you changed your mind: the recording stops and nothing of the call is kept.
+    @objc func forgetCall() {
+        let alert = NSAlert()
+        alert.messageText = "Stop og slet dette opkald?"
+        alert.informativeText = "Optagelsen stopper, og lyd, udskrift og noter fra opkaldet slettes. Det kan ikke fortrydes."
+        alert.addButton(withTitle: "Stop og slet")
+        alert.addButton(withTitle: "Annullér")
+        NSApp.activate(ignoringOtherApps: true)
+        if alert.runModal() == .alertFirstButtonReturn { post("/forget", [:]) }
+    }
 
     @objc func openCalendarAccess() {
         if calendar.undecided {
@@ -370,11 +410,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
             var settings: [String: Any]? = nil
             var newCall: String? = nil
             var up: [String: Any]? = nil
+            var inCall = false
             let mm = { (s: Int) in "\(s / 60):" + String(format: "%02d", s % 60) }
             if let data, let st = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
                 settings = st["settings"] as? [String: Any]
                 up = st["upcoming"] as? [String: Any]
-                if (st["active"] as? Bool) == true {
+                inCall = (st["active"] as? Bool) == true
+                if inCall {
                     let share = (st["share"] as? Int).map { "\($0)%" } ?? "live"
                     title = "● \(share)"
                     if let cd = st["countdown"] as? [String: Any], let left = cd["left_s"] as? Int {
@@ -413,6 +455,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
                 }
                 if let settings { self.settings = settings }
                 self.upcoming = up
+                self.inCall = inCall
                 // A new call: open next to it. A call already placed is left where you moved it.
                 if let newCall, newCall != self.callKey, (self.settings["auto_open"] as? String) != "never" {
                     self.callKey = newCall
@@ -451,6 +494,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
     // The page says "type" when you click into the feedback box. The panel never activates the app, so
     // typed or dictated text would go to the app in front; a click of your own brings this app forward.
     func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) {
+        if let body = message.body as? [String: Any], let text = body["copy"] as? String {   // "Kopiér til chatten"
+            NSPasteboard.general.clearContents()
+            NSPasteboard.general.setString(text, forType: .string)
+            return
+        }
         guard (message.body as? String) == "type" else { return }
         NSApp.activate(ignoringOtherApps: true)
         window.makeKey()

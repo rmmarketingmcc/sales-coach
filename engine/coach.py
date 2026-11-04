@@ -26,6 +26,7 @@ import html as html_lib
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 import threading
@@ -52,7 +53,6 @@ HUD_FILE = ENGINE / "window.html"
 PORT = int(os.environ.get("SALES_COACH_PORT", "8765"))
 VERSION = (ENGINE.parent / "VERSION").read_text().strip() if (ENGINE.parent / "VERSION").exists() else "dev"
 SETTINGS_FILE = DATA / "settings.json"
-CALLS_LOG = DATA / "calls.jsonl"
 FEEDBACK_FILE = DATA / "feedback.jsonl"
 PREP_FILE = DATA / "prep.json"
 JOINED_FILE = DATA / "joined.json"
@@ -128,6 +128,9 @@ T = {
            "book_title": "Møde: {names} og {me}", "book_topic": "Opfølgning", "book_unclear": "Dag eller tid uklar ({d} {t}): book selv.",
            "book_missing": "Kun {emails} har en mail i invitationen: tilføj de andre selv.",
            "book_practice": "Øvesamtale: intet bliver booket.", "book_opened": "Åbnet i din kalender: tjek og send invitationen derfra.",
+           "notice": "Hej! Jeg optager vores samtale lokalt på min computer, så jeg kan skrive noter bagefter. Den deles ikke{ai}, og lyden slettes {when}. Sig endelig til, hvis du hellere vil have, at jeg ikke optager.",
+           "notice_ai": ", men en AI-assistent (Claude) hjælper mig med noterne",
+           "notice_now": "lige efter samtalen", "notice_days": "efter {d} dage",
            "busy": "optaget", "them_word": "dem", "and": "og"},
     "en": {"untitled": "Unscheduled call", "loading": "Loading...", "me": "You", "them": "Them",
            "src": {"default": "default", "title": "from the title", "team attendees": "team invited",
@@ -151,6 +154,9 @@ T = {
            "book_title": "Meeting: {names} and {me}", "book_topic": "Follow-up", "book_unclear": "Day or time unclear ({d} {t}): book it yourself.",
            "book_missing": "Only {emails} has an address on the invite: add the others yourself.",
            "book_practice": "Practice call: nothing gets booked.", "book_opened": "Opened in your calendar: check it and send the invite from there.",
+           "notice": "Hi! I'm recording our conversation locally on my computer so I can write notes afterwards. It isn't shared{ai}, and the audio is deleted {when}. Just say if you'd rather I didn't record.",
+           "notice_ai": ", though an AI assistant (Claude) helps me with the notes",
+           "notice_now": "right after the call", "notice_days": "after {d} days",
            "busy": "busy", "them_word": "them", "and": "and"},
 }
 
@@ -175,7 +181,7 @@ def stamp(seconds: float) -> str:
 
 DEFAULTS = {"name": "", "company": "", "about": "", "language": "da", "enabled": True, "auto_open": "all",
             "auto_join": True, "ai": "auto", "team_domains": [], "words": [], "addons": [], "targets": {},
-            "keep_audio_days": 30}
+            "keep_audio_days": 7, "keep_notes_days": 365, "notice": True, "notice_text": ""}
 
 
 def load_settings() -> dict:
@@ -210,12 +216,53 @@ def save_settings(changes: dict) -> dict:
             s["keep_audio_days"] = max(0, int(changes["keep_audio_days"]))
         except (TypeError, ValueError):
             pass
+    if "keep_notes_days" in changes:   # None / "never" / 0: kept until you delete them
+        v = changes["keep_notes_days"]
+        try:
+            s["keep_notes_days"] = None if v in (None, "", "never") or int(v) <= 0 else max(7, int(v))
+        except (TypeError, ValueError):
+            pass
+    if "notice" in changes:
+        s["notice"] = bool(changes["notice"])
+    if "notice_text" in changes:
+        s["notice_text"] = str(changes["notice_text"] or "").strip()[:600]
     if changes.get("api_key"):   # never in the settings file: into the Keychain
         ai.save_api_key(str(changes["api_key"]).strip())
     DATA.mkdir(parents=True, exist_ok=True)
     SETTINGS_FILE.write_text(json.dumps(s, ensure_ascii=False, indent=1))
     log(f"settings: { {k: v for k, v in s.items() if k != 'about'} }")
     return s
+
+
+def notice_text(ai_on: bool) -> str:
+    """The line that tells the other side you record: your own text, or the standard one with your settings in it."""
+    s, t = load_settings(), tr()
+    days = int(s.get("keep_audio_days", 7))
+    return (s.get("notice_text") or t["notice"]).format(ai=t["notice_ai"] if ai_on else "",
+                                                        when=t["notice_now"] if days == 0 else t["notice_days"].format(d=days))
+
+
+def forget_call(folder: Path) -> None:
+    """Everything of one call: the recording folder (audio, transcript, notes, result) and your feedback rows on it.
+    The recorder is told to stop first when it is still recording it (.stop: it deletes the recording itself
+    and waits until the call app lets go of the mic)."""
+    meta = read_meta(folder) or {}
+    if meta.get("status") == "recording":
+        (ROOT / ".stop").write_text(folder.name)
+        for _ in range(20):   # the recorder checks every second
+            if not folder.exists():
+                break
+            time.sleep(0.5)
+        (ROOT / ".stop").unlink(missing_ok=True)   # never left for the next call's recording
+    shutil.rmtree(folder, ignore_errors=True)
+    try:
+        rows = [l for l in FEEDBACK_FILE.read_text().splitlines() if l.strip()]
+        keep = [l for l in rows if (json.loads(l).get("started") or "") != (meta.get("started") or "-")]
+        if len(keep) != len(rows):
+            FEEDBACK_FILE.write_text("".join(l + "\n" for l in keep))
+    except (OSError, ValueError):
+        pass
+    log(f"call deleted on request: {folder.name}")
 
 
 def tr() -> dict:
@@ -838,6 +885,8 @@ class Session:
         self.demo = None
         self.delays: list[float] = []                # end of speech -> line locked in, seconds
         self.finished = False
+        self.notice: dict | None = None   # how you told them you record: {"how": "said"|"chat", "at": s}
+        self.forgotten = False            # "Stop og slet": nothing of this call is kept
         self.transcriber = Transcriber(self) if whisper and feed is None else None
         self.consolidator = Consolidator(self) if self.transcriber else None
         if self.transcriber:
@@ -1217,6 +1266,8 @@ class Session:
                 "speaking": [w for w, tr_ in (("me", self.mic), ("them", self.sys)) if tr_.utt_start is not None],
                 "ai": self.ai_state, "prep_sources": ctx.get("prep_sources") or [], "notes": self.notes,
                 "replay": bool(self.replay),
+                "notice": None if self.notice or not load_settings().get("notice", True) or self.replay
+                          else {"text": notice_text(self.how != "off")},
             }
 
     def set_type(self, kind: str) -> None:
@@ -1229,7 +1280,8 @@ class Session:
     def finish(self, notes: bool | None = None) -> dict:
         """Stop, save the talk stats, and (live) write the call notes from the live transcript."""
         notes = (not self.replay) if notes is None else notes
-        alive = self.folder.exists()   # the recorder deletes calls under 90 s (a mic test, a meeting left at once)
+        # the recorder deletes calls under 90 s (a mic test, a meeting left at once); "Stop og slet" deletes it too
+        alive = self.folder.exists() and not self.forgotten
         notes = notes and alive and self.transcriber is not None
         with self.lock:
             self.finished = True
@@ -1252,13 +1304,11 @@ class Session:
             "end_planned": self.ctx.get("end"), "ended_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
             "plan": self.plan, "agenda": self.ctx.get("agenda") or [], "who": self.ctx.get("who"),
             "planned_min": self.ctx.get("planned_min"), "emails": self.ctx.get("emails") or [],
-            "attendees": self.ctx.get("attendees") or [], "version": VERSION,
+            "attendees": self.ctx.get("attendees") or [], "version": VERSION, "notice": self.notice,
         }
         if not self.replay and alive:
             try:
                 (self.folder / "copilot.json").write_text(json.dumps(summary, ensure_ascii=False, indent=1))
-                with open(CALLS_LOG, "a") as f:
-                    f.write(json.dumps(summary, ensure_ascii=False) + "\n")
             except OSError as e:
                 log(f"copilot.json not written: {e}")
         log(f"call done: you {snap['share']}% (target {snap['target']}), longest stretch you "
@@ -1496,6 +1546,7 @@ class App:
         self.last_poll = 0.0
         self.last_agent = ""
         self.ended_folder: Path | None = None   # hung up, while the recorder still finishes that recording
+        self.forgotten_at = 0.0                 # "Stop og slet": the window says it is gone
 
     def window_open(self) -> bool:
         """The window asks for /state every second while it is open."""
@@ -1511,6 +1562,7 @@ class App:
         out["me"] = {"name": settings.get("name") or "", "initials": "".join(p[0] for p in (settings.get("name") or "").split()[:2]).upper()}
         out["ai_backend"] = how_ai()
         out["version"] = VERSION
+        out["forgotten"] = time.time() - self.forgotten_at < 30
         return out
 
 
@@ -1580,6 +1632,29 @@ def make_handler(app: App):
                 self._json({})
             elif self.path.startswith("/settings"):
                 self._json(save_settings(body))
+            elif self.path.startswith("/notice"):   # you told them: said it, or pasted the line in the chat
+                s = app.session
+                if s and body.get("how") in ("said", "chat"):
+                    s.notice = {"how": body["how"], "at": round(s.call_elapsed())}
+                    log(f"recording notice: {body['how']} at {mmss(s.call_elapsed())}")
+                self._json({})
+            elif self.path.startswith("/forget"):   # "Stop og slet": the call going on now, nothing kept
+                s = app.session
+                if s:
+                    s.forgotten = True
+                    s.use_llm, s.ai_state = False, "off"
+                    app.forgotten_at = time.time()
+                    threading.Thread(target=forget_call, args=(s.folder,), daemon=True).start()
+                self._json({})
+            elif self.path.startswith("/delete_call"):   # one past call, from its page
+                d = _call_dir(str(body.get("call") or ""))
+                if d and not (app.session and app.session.folder == d):
+                    forget_call(d)
+                    if app.last and app.last.get("folder") == d.name:
+                        app.last = last_summary()
+                    self._json({})
+                else:
+                    self._json({"error": "no such call"}, 400)
             elif self.path.startswith("/book"):
                 # the window's button: the one click that books it (never on its own)
                 b = (app.last or {}).get("booking") or {}
@@ -1927,26 +2002,34 @@ _TIDY = threading.Lock()
 
 
 def tidy_recordings() -> None:
-    """Raw call audio is about 700 MB an hour. Once a call is over and its notes are written, each track is
-    compressed (AAC, speech quality, about 15 MB an hour); after keep_audio_days the audio is deleted. The
-    transcript, notes and numbers stay. keep_audio_days 0 = the audio goes right after the call."""
+    """How long a call is kept (storage limitation under GDPR), in the settings:
+    - audio: about 700 MB an hour raw. Once a call is over and its notes are written, each track is compressed
+      (AAC, speech quality, about 15 MB an hour); after keep_audio_days it is deleted (0 = right after the call).
+    - everything else of a call (transcript, notes, the coach's result) and your feedback on it: deleted after
+      keep_notes_days (None = until you delete it yourself)."""
     if not _TIDY.acquire(blocking=False):   # a long call still compressing from the last minute
         return
     try:
-        keep = int(load_settings().get("keep_audio_days", 30))
+        settings = load_settings()
+        keep = int(settings.get("keep_audio_days", 7))
+        keep_notes = settings.get("keep_notes_days")
         active = active_recording()
         now = datetime.now(timezone.utc)
         for folder in sorted(p for p in ROOT.iterdir() if p.is_dir()) if ROOT.exists() else []:
             meta = read_meta(folder)
             if not meta or meta.get("status") == "recording" or (active and folder == active[0]):
                 continue
-            audio = list(folder.glob("*.caf")) + list(folder.glob("*.m4a"))
-            if not audio:
-                continue
             try:
                 done_at = datetime.fromtimestamp((folder / "meta.json").stat().st_mtime, timezone.utc)
                 started = datetime.fromisoformat(meta["started"].replace("Z", "+00:00"))
             except (OSError, KeyError, ValueError):
+                continue
+            if keep_notes and now - started >= timedelta(days=int(keep_notes)):
+                shutil.rmtree(folder, ignore_errors=True)
+                log(f"call deleted after {keep_notes} days: {folder.name}")
+                continue
+            audio = list(folder.glob("*.caf")) + list(folder.glob("*.m4a"))
+            if not audio:
                 continue
             if not (folder / "transcript.md").is_file() and now - done_at < TIDY_AFTER:
                 continue   # the notes still read the raw tracks
@@ -1964,6 +2047,12 @@ def tidy_recordings() -> None:
                 else:
                     m4a.unlink(missing_ok=True)
                     log(f"audio not compressed: {caf} ({(r.stderr or '').strip()[:200]})")
+        if keep_notes and FEEDBACK_FILE.exists():   # your feedback rows quote the call: same limit
+            cut = (now - timedelta(days=int(keep_notes))).isoformat()
+            rows = [l for l in FEEDBACK_FILE.read_text().splitlines() if l.strip()]
+            keep_rows = [l for l in rows if (json.loads(l).get("at") or "") >= cut]
+            if len(keep_rows) != len(rows):
+                FEEDBACK_FILE.write_text("".join(l + "\n" for l in keep_rows))
     except Exception as e:  # noqa: BLE001
         log(f"tidy failed: {e}")
     finally:
@@ -2068,7 +2157,9 @@ def cmd_serve(args) -> None:
                 stop.set()
                 time.sleep(0.5)
                 s.step()
-                app.last = s.finish(notes=None if settings["enabled"] else False)
+                summary = s.finish(notes=None if settings["enabled"] else False)
+                if not s.forgotten:
+                    app.last = summary
                 app.session = None
                 app.ended_folder = s.folder if hung_up and rec and rec[0] == s.folder else None
                 log(f"call ended ({'hang-up' if hung_up else 'recording stopped'}): {s.folder.name}")
@@ -2259,6 +2350,10 @@ def main() -> None:
     se.add_argument("--addons", help="add-on files, comma separated")
     se.add_argument("--keep-audio-days", dest="keep_audio_days", type=int,
                     help="days to keep call audio (compressed) before it is deleted; 0 = right after the call")
+    se.add_argument("--keep-notes-days", dest="keep_notes_days",
+                    help="days to keep transcripts, notes and results; never = until you delete them")
+    se.add_argument("--notice", type=lambda v: v.lower() in ("1", "on", "yes", "true"),
+                    help="on/off: remind you at the start of each call to tell them you record")
     args = p.parse_args()
     {"serve": cmd_serve, "replay": cmd_replay, "stats": cmd_stats, "cues": cmd_cues, "settings": cmd_settings}[args.cmd](args)
 

@@ -39,6 +39,9 @@ let phoneFlag = rootDir.appendingPathComponent(".phone_call")
 // The next meeting's video link was opened: the coach writes this, and the recording in
 // progress ends and a new one starts at once, so each meeting gets its own recording, coach and notes.
 let splitFlag = rootDir.appendingPathComponent(".split")
+// "Stop og slet" in the coach: the recording going on now is stopped and deleted, and nothing new starts until the
+// call app lets go of the mic (the coach writes this file and deletes everything else of the call).
+let stopFlag = rootDir.appendingPathComponent(".stop")
 
 // Apps whose microphone use means "I'm in a call". Lowercase prefix of the Core Audio
 // process bundle ID (browser helpers report e.g. com.google.chrome.helper).
@@ -569,6 +572,19 @@ final class Controller {
         let holders = micHolders().filter(isMeetingApp)
         let now = Date()
         let phone = FileManager.default.fileExists(atPath: phoneFlag.path)
+        if FileManager.default.fileExists(atPath: stopFlag.path) {
+            let at = (try? FileManager.default.attributesOfItem(atPath: stopFlag.path))?[.modificationDate] as? Date
+            try? FileManager.default.removeItem(at: stopFlag)
+            if let current = recording, let at, now.timeIntervalSince(at) < 30 {   // an old one is ignored
+                current.stop()
+                recording = nil
+                try? FileManager.default.removeItem(at: current.dir)
+                try? FileManager.default.removeItem(at: phoneFlag)
+                waitForMicRelease = current.trigger != "phone"
+                log("recording deleted on request: \(current.dir.lastPathComponent)")
+                return
+            }
+        }
         if FileManager.default.fileExists(atPath: splitFlag.path) {
             let at = (try? FileManager.default.attributesOfItem(atPath: splitFlag.path))?[.modificationDate] as? Date
             try? FileManager.default.removeItem(at: splitFlag)
