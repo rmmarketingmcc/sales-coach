@@ -32,6 +32,11 @@ here, and each user's own data through add-ons, so every improvement reaches eve
 - [x] The guide page (GitHub Pages) in the RM look, with the install line and real screenshots from a made-up call
 - [x] GDPR: a reminder on every call to tell them you record (message to paste in the chat, or "said it"), saved
       with the call; "Stop og slet" for the call going on; delete any saved call; audio and notes deleted after a set time
+- [x] The recording notice written in the Google Meet chat by the app itself (Chrome, Brave, Edge, Safari: the browser's
+      "Allow JavaScript from Apple Events" once), with the copy button for Zoom, Teams and the rest
+- [x] Your own agenda: pasted in the window (during the call, or saved for the next meeting) or read from a list in
+      the invite; ticked off by the coach from what is said, Danish or English, or by you; without AI a plain checklist
+- [x] One language for users: the page, installer, window, menus and permission texts in Danish
 - [x] The page follows the app: version and "What's new" from each release (`docs/changelog.json`), pictures retaken
       from the made-up call with `tests/page_shots.py`
 
@@ -39,7 +44,7 @@ here, and each user's own data through add-ons, so every improvement reaches eve
 
 - [ ] Your own notes per company or person (one file each, matched by mail domain or name), used in the brief
 - [ ] Your own standard questions per call type, shown after sales calls with what is still unanswered
-- [ ] The window in English as well as Danish (it follows the language setting)
+- [ ] English for everything a user sees (window, menus, installer, page), following the language setting
 - [ ] Practice calls with an AI lead, using the Mac's own voice
 - [ ] A count of how many Macs use it (one anonymous ping a day, no id), like Sunscreen
 
