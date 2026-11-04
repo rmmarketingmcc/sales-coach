@@ -1,9 +1,9 @@
-# Changelog
+# Ændringer
 
 ## 0.1.0 (5 Nov 2026)
 
-- The coach runs on its own: settings for your name, company and language, AI on your own Claude (Claude Code or your own API key) or off, meetings from calendar.json, and add-ons for your own data.
-- Booking the agreed next meeting opens it in your calendar; nothing is sent without your click.
-- The window shows your initials and your local time.
-- A made-up test call runs the whole coach end to end.
-- The result after a call never judges your talk share when it wasn't measured, and only lists answers to standard questions you actually have.
+- Coachen kører af sig selv: indstillinger for dit navn, firma og sprog, AI på din egen Claude (Claude Code eller din egen API-nøgle) eller slået fra, møder fra kalenderen og tilføjelser til dine egne data.
+- Når I aftaler et næste møde, åbner ét klik det i din kalender. Intet bliver sendt, før du selv klikker.
+- Vinduet viser dine initialer og din egen tid.
+- Et opdigtet testmøde kører hele coachen fra start til slut.
+- Vurderingen efter et møde dømmer aldrig din taleandel, når den ikke blev målt.

@@ -1,9 +1,8 @@
 #!/bin/bash
 # Publishes a new Sales Coach version.
-#   ./release.sh 0.2.1                          notes written from the commits since the last release
-#   ./release.sh 0.2.1 "Fixed the clock"        or your own notes (one line, or several "- " lines)
+#   ./release.sh 0.2.1 "Uret viser rigtig tid"   notes in Danish, one per line: they go on the page under "Nyt"
+#   ./release.sh 0.2.1                          prints the commit subjects since the last release to write from
 # Friends get it by running the install line again (docs/install.sh downloads the latest release).
-# Write commit subjects for users; prefix website-only commits with "Guide:" to keep them out of the notes.
 # Before anything is published, SALES_COACH_LEAK_CHECK (a script outside this repo, given the repo path)
 # must pass: no client names or private data in the code.
 set -euo pipefail
@@ -22,9 +21,14 @@ else
 fi
 
 if [[ -z "$NOTES" ]]; then
+  # the page and the changelog are Danish, the commit subjects English: the notes are written by hand
   PREV=$(git describe --tags --abbrev=0 --match 'v[0-9]*' 2>/dev/null || true)
-  NOTES=$(git log --no-merges --pretty='%s' ${PREV:+$PREV..}HEAD | grep -vE '^(Release |Guide:|Changelog|Housekeeping)' || true)
-  [[ -n "$NOTES" ]] || { echo "No changes since $PREV, nothing to release"; exit 1; }
+  echo "Write the notes in Danish (they go on the page under \"Nyt\"), e.g.:"
+  echo "  ./release.sh $VERSION \"Coachen skriver selv i Meet-chatten, at du optager"
+  echo "Din egen dagsorden bliver krydset af\""
+  echo "Changes since ${PREV:-the start}:"
+  git log --no-merges --pretty='  - %s' ${PREV:+$PREV..}HEAD | grep -vE '^  - (Release |Guide:|Changelog|Housekeeping)' || true
+  exit 1
 fi
 NOTES=$(printf '%s\n' "$NOTES" | sed -e '/^[[:space:]]*$/d' -e 's/^[-*] //' -e 's/^/- /')
 

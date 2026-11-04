@@ -74,7 +74,7 @@ agent() {   # agent <label> <log file> <program> [args...]: a LaunchAgent that s
     launchctl bootstrap "gui/$UID_NUM" "$AGENTS/$label.plist" 2>/dev/null && return 0
     sleep 1
   done
-  launchctl print "gui/$UID_NUM/$label" >/dev/null 2>&1 || { echo "Could not start $label"; return 1; }
+  launchctl print "gui/$UID_NUM/$label" >/dev/null 2>&1 || { echo "Kunne ikke starte $label"; return 1; }
 }
 
 uninstall() {
@@ -82,28 +82,28 @@ uninstall() {
   for label in "${LABELS[@]}"; do rm -f "$AGENTS/$label.plist"; done
   rm -rf "$APP" "$REC" "$DATA"
   security delete-generic-password -s "Sales Coach" -a anthropic >/dev/null 2>&1 || true
-  echo "Sales Coach is removed, with its settings and call history."
-  echo "Your recordings and notes are still in ~/CallRecordings: delete that folder if you want them gone too."
-  echo "The speech model (about 6 GB) is in ~/.cache/huggingface/hub: the two folders with \"whisper-large-v3\" in the name."
+  echo "Sales Coach er fjernet, med indstillinger og historik."
+  echo "Dine optagelser og noter ligger stadig i ~/CallRecordings. Slet mappen, hvis de også skal væk."
+  echo "Talemodellen (cirka 6 GB) ligger i ~/.cache/huggingface/hub: de to mapper med \"whisper-large-v3\" i navnet."
 }
 
 main() {
   if [[ "${1:-}" == "--uninstall" ]]; then uninstall; return; fi
 
-  [[ "$(uname -m)" == "arm64" ]] || { echo "Sales Coach needs a Mac with Apple Silicon (M1 or newer)."; exit 1; }
+  [[ "$(uname -m)" == "arm64" ]] || { echo "Sales Coach kræver en Mac med Apple Silicon (M1 eller nyere)."; exit 1; }
   local os
   os="$(sw_vers -productVersion)"
   [[ "$(printf '%s\n%s\n' 14.4 "$os" | sort -V | head -1)" == "14.4" ]] ||
-    { echo "Sales Coach needs macOS 14.4 or newer. This Mac has $os."; exit 1; }
+    { echo "Sales Coach kræver macOS 14.4 eller nyere. Den her Mac har $os."; exit 1; }
   local hub="${HF_HOME:-$HOME/.cache/huggingface}/hub"
   if [[ ! -d "$hub/models--mlx-community--whisper-large-v3-mlx" ]]; then
     local free_gb=$(( $(df -k "$HOME" | awk 'NR==2 {print $4}') / 1024 / 1024 ))
-    (( free_gb >= 9 )) || { echo "Sales Coach needs about 9 GB free the first time (the speech model). This Mac has $free_gb GB."; exit 1; }
+    (( free_gb >= 9 )) || { echo "Sales Coach skal bruge cirka 9 GB fri plads første gang (talemodellen). Den her Mac har $free_gb GB."; exit 1; }
   fi
   local first=""
   [[ -f "$DATA/settings.json" ]] || first=1
 
-  say "Downloading Sales Coach..."
+  say "Henter Sales Coach..."
   local tmp
   tmp="$(mktemp -d)"
   trap 'rm -rf "'"$tmp"'"' EXIT
@@ -115,7 +115,7 @@ main() {
   xattr -dr com.apple.quarantine "$APP" "$REC" 2>/dev/null || true
   echo "Version $(cat "$APP/Contents/Resources/VERSION")"
 
-  say "Setting up the coach (its own Python, in Sales Coach's folder)..."
+  say "Gør coachen klar (sin egen Python, i Sales Coach-mappen)..."
   export UV_PYTHON_INSTALL_DIR="$DATA/python" UV_CACHE_DIR="$DATA/.uv-cache"
   local uv="$DATA/bin/uv"
   if [[ ! -x "$uv" ]]; then
@@ -125,53 +125,53 @@ main() {
   "$uv" pip install --quiet --python "$PY" -r "$ENGINE/requirements.txt"
   "$uv" cache clean --quiet >/dev/null 2>&1 || true   # the venv holds what it needs; the cache would double the size on disk
 
-  say "Downloading the speech model (Whisper large-v3, about 6 GB the first time)..."
+  say "Henter talemodellen (Whisper large-v3, cirka 6 GB første gang)..."
   "$PY" - <<'PYEOF'
 from huggingface_hub import snapshot_download
 for repo in ("mlx-community/whisper-large-v3-mlx", "Systran/faster-whisper-large-v3"):
     snapshot_download(repo)
-print("Speech model ready.")
+print("Talemodellen er klar.")
 PYEOF
 
   if [[ -n "$first" ]]; then
-    say "A few questions, so the coach knows who you are (Enter skips one)"
+    say "Et par spørgsmål, så coachen ved, hvem du er (Retur springer over)"
     local name company about lang
-    name="$(ask "Your name:")"
-    company="$(ask "Your company:")"
-    about="$(ask "What you sell, in one line:")"
-    lang="$(ask "The language of your calls, da (Danish) or en (English) [da]:" da)"
+    name="$(ask "Dit navn:")"
+    company="$(ask "Dit firma:")"
+    about="$(ask "Hvad du sælger, i én linje:")"
+    lang="$(ask "Sproget i dine møder, da (dansk) eller en (engelsk) [da]:" da)"
     [[ "$lang" == en* ]] && lang=en || lang=da
     "$PY" "$ENGINE/coach.py" settings --name "$name" --company "$company" --about "$about" --language "$lang" >/dev/null
   fi
 
-  say "The AI part (checklist, cues and notes)"
+  say "AI-delen (tjekliste, stikord og noter)"
   local claude=""
   for c in "$(command -v claude 2>/dev/null || true)" "$HOME/.local/bin/claude" "$HOME/.claude/local/claude" \
            /opt/homebrew/bin/claude /usr/local/bin/claude; do
     if [[ -n "$c" && -x "$c" ]]; then claude="$c"; break; fi
   done
   if [[ -n "$claude" ]]; then
-    echo "Claude Code found: the coach runs on your own Claude subscription."
+    echo "Claude Code fundet: coachen kører på dit eget Claude-abonnement."
   elif security find-generic-password -s "Sales Coach" -a anthropic >/dev/null 2>&1; then
-    echo "Your Anthropic API key is in the Keychain: the coach uses it."
+    echo "Din API-nøgle fra Anthropic ligger i nøgleringen, og coachen bruger den."
   else
-    echo "It needs your own Claude: Claude Code (claude.com/claude-code, on your Claude subscription) or an Anthropic API key."
-    echo "Without either, the talk meter, transcript and clock still work."
+    echo "Den skal bruge din egen Claude: Claude Code (claude.com/claude-code, på dit Claude-abonnement) eller en API-nøgle fra Anthropic."
+    echo "Uden nogen af dem virker taletid, transskription og ur stadig."
     local key
-    key="$(ask_secret "Paste an API key now, or press Enter to skip:")"
+    key="$(ask_secret "Sæt en API-nøgle ind nu, eller tryk Retur for at springe over:")"
     if [[ -n "$key" ]]; then
-      "$PY" "$ENGINE/coach.py" settings --api-key "$key" >/dev/null && echo "Saved in your Keychain."
+      "$PY" "$ENGINE/coach.py" settings --api-key "$key" >/dev/null && echo "Gemt i din nøglering."
     fi
   fi
 
   if [[ -n "$NO_SERVICES" ]]; then
-    say "Installed (no services: SALES_COACH_NO_SERVICES)."
+    say "Installeret (uden baggrundstjenester: SALES_COACH_NO_SERVICES)."
     return
   fi
 
-  say "Permissions (macOS asks once)"
-  echo "1. Sales Coach Recorder: the Microphone and the call audio (\"Screen & System Audio Recording\", audio only)."
-  echo "   Click Allow on both. Two short sounds play to test it; nothing is kept."
+  say "Tilladelser (macOS spørger én gang)"
+  echo "1. Sales Coach Recorder: Mikrofonen og lyden fra mødet (\"Skærm- og systemlydoptagelse\", kun lyd)."
+  echo "   Tryk Tillad til begge. To korte lyde tester det, og intet bliver gemt."
   ( sleep 5; afplay /System/Library/Sounds/Glass.aiff; sleep 2; afplay /System/Library/Sounds/Glass.aiff ) >/dev/null 2>&1 &
   open -W "$REC" --args --test 15 || true
   local result
@@ -187,23 +187,27 @@ for meta in Path(sys.argv[1]).glob("*/meta.json"):   # the test recording: not a
         pass
 PYEOF
   if [[ "$result" =~ system\ ([0-9.]+)\ mic\ ([0-9.]+) ]]; then
-    [[ "${BASH_REMATCH[1]}" != "0.000" ]] && echo "   Call audio: works." ||
-      echo "   Call audio was silent. Allow Sales Coach Recorder in System Settings > Privacy & Security > Screen & System Audio Recording."
-    [[ "${BASH_REMATCH[2]}" != "0.000" ]] && echo "   Microphone: works." ||
-      echo "   The microphone was silent. Allow Sales Coach Recorder in System Settings > Privacy & Security > Microphone."
+    [[ "${BASH_REMATCH[1]}" != "0.000" ]] && echo "   Lyden fra mødet: virker." ||
+      echo "   Lyden fra mødet var tavs. Tillad Sales Coach Recorder i Systemindstillinger > Anonymitet og sikkerhed > Skærm- og systemlydoptagelse."
+    [[ "${BASH_REMATCH[2]}" != "0.000" ]] && echo "   Mikrofonen: virker." ||
+      echo "   Mikrofonen var tavs. Tillad Sales Coach Recorder i Systemindstillinger > Anonymitet og sikkerhed > Mikrofon."
   fi
-  echo "2. Sales Coach: your Calendar, so the coach knows who you meet and when the meeting ends. Click Allow."
+  echo "2. Sales Coach: din Kalender, så coachen ved, hvem du mødes med, og hvornår mødet slutter. Tryk Tillad."
   open -W "$APP" --args --export-calendar || true
+  echo "3. Sales Coach: lov til at styre din browser, så den selv kan skrive i Google Meet-chatten, at du optager. Tryk OK."
+  open -W "$APP" --args --ask-browser || true
+  echo "   Bruger du Google Meet i Chrome, så vælg én gang Se > Udvikler > Tillad JavaScript via Apple Events."
+  echo "   I Safari: Udvikler > Tillad JavaScript fra Apple Events."
 
-  say "Starting Sales Coach..."
+  say "Starter Sales Coach..."
   agent dk.rmmarketing.salescoach.recorder "$ROOT/callrec.err.log" "$REC/Contents/MacOS/SalesCoachRecorder"
   agent dk.rmmarketing.salescoach.engine "$DATA/coach.log" "$PY" "$ENGINE/coach.py" serve
   sleep 3
   open "$APP"
   echo
-  echo "Done. Sales Coach runs in the background from now on: join a call (Meet, Zoom, Teams, Slack...)"
-  echo "and the coach opens next to it. \"Coach\" in the menu bar has its switches."
-  echo "Recordings and notes: ~/CallRecordings. Update: run the same line again."
+  echo "Færdig. Sales Coach kører i baggrunden fra nu af: gå til et møde (Meet, Zoom, Teams, Slack...),"
+  echo "så åbner coachen ved siden af det. \"Coach\" i menulinjen har kontakterne."
+  echo "Optagelser og noter: ~/CallRecordings. Opdatering: kør den samme linje igen."
 }
 
 main "$@"

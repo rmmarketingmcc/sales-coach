@@ -1,12 +1,12 @@
 <!doctype html>
-<html lang="en">
+<html lang="da">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Sales Coach</title>
-<meta name="description" content="A live coach for your sales calls, on your own Mac. No bot joins the call.">
+<meta name="description" content="En coach, der sidder med på dine salgsmøder. På din egen Mac, uden en bot i mødet.">
 <meta property="og:title" content="Sales Coach">
-<meta property="og:description" content="A live coach for your sales calls, on your own Mac. No bot joins the call.">
+<meta property="og:description" content="En coach, der sidder med på dine salgsmøder. På din egen Mac, uden en bot i mødet.">
 <meta property="og:image" content="https://rmmarketingmcc.github.io/sales-coach/img/og.png">
 <link rel="icon" href="img/favicon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -231,6 +231,37 @@
   .news .v h3 span { font: 500 13px Poppins, sans-serif; color: var(--faint); }
   .news ul { margin: 6px 0 0; padding-left: 20px; color: var(--muted); }
 
+  /* your agenda, Bliv bedre, the Meet chat, everything it does */
+  .agmock, .growth { background: var(--card); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow); padding: 16px; display: grid; gap: 10px; align-content: start; }
+  .ag { display: grid; grid-template-columns: 20px 1fr; gap: 10px; font-weight: 600; font-size: 15px; }
+  .ag .box { width: 18px; height: 18px; border-radius: 5px; border: 2px solid var(--line); display: grid; place-items: center; font-size: 12px; color: var(--ink); margin-top: 2px; }
+  .ag.done .box { background: var(--lime); border-color: var(--lime); }
+  .ag.done > div { color: var(--faint); }
+  .ag.done > div::first-line { text-decoration: line-through; }
+  .ag small { display: block; font-weight: 400; font-size: 12px; color: var(--faint); text-decoration: none; }
+  .ag.part small { color: #b35a00; }
+  .dl { font-size: 11px; font-weight: 700; color: #b35a00; border: 1px solid #E67E22; border-radius: 999px; padding: 0 6px; margin-right: 4px; }
+  .goal { display: grid; grid-template-columns: 1fr auto auto; gap: 12px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--line); }
+  .goal .gl { display: block; font-weight: 600; font-size: 14px; }
+  .goal .gt { display: block; font-size: 12px; color: var(--faint); }
+  .dots { display: flex; gap: 5px; }
+  .dots i { width: 12px; height: 12px; border-radius: 50%; display: block; }
+  .dots i.ok { background: #27AE60; }
+  .dots i.no { background: #c0392b; }
+  .goal .gr { font-size: 13px; font-weight: 600; color: var(--muted); }
+  .trend { width: 100%; height: 70px; }
+  .chat { background: #fff; border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow); padding: 14px; font-size: 14px; color: #1f1f1f; }
+  .chat .ch { font-weight: 600; font-size: 16px; margin-bottom: 10px; }
+  .chat .msg b { font-size: 13px; }
+  .chat .msg span { font-size: 12px; color: #5f6368; margin-left: 6px; }
+  .chat .msg p { margin: 4px 0 12px; line-height: 1.45; }
+  .chat .in { border-radius: 999px; background: #f1f3f4; padding: 9px 14px; color: #5f6368; font-size: 13px; }
+  .all { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+  .all > div { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 18px 20px; box-shadow: var(--shadow); }
+  .all ul { margin: 8px 0 0; padding-left: 18px; color: var(--muted); }
+  .all li { margin: 5px 0; }
+  .tag { font-size: 11px; font-weight: 700; color: var(--ink); background: var(--lime-soft); border: 1px solid var(--lime); border-radius: 6px; padding: 0 5px; margin-left: 4px; vertical-align: 1px; }
+
   /* Needs, privacy */
   .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
   .card { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 20px; box-shadow: var(--shadow); }
@@ -253,7 +284,7 @@
   footer .links { display: flex; flex-wrap: wrap; gap: 18px; margin-top: 14px; font-size: 14px; }
 
   @media (max-width: 820px) {
-    .hero, .shot-row, .step, .cards, .problems, .gdpr { grid-template-columns: 1fr; }
+    .hero, .shot-row, .step, .cards, .problems, .gdpr, .all { grid-template-columns: 1fr; }
     .hub { grid-template-columns: 1fr; justify-items: center; }
     .hub .col { width: 100%; }
     .hero h1 { font-size: 40px; }
@@ -271,207 +302,299 @@
     <div>
       <img class="icon" src="img/icon.png" alt="">
       <h1>Sales Coach</h1>
-      <p class="tag">A live coach for your sales calls, on your own Mac. No bot joins the call.</p>
-      <p class="meta">Free. For a Mac with Apple Silicon (M1 or newer) and macOS 14.4 or newer.<span id="ver"></span></p>
+      <p class="tag">En coach, der sidder med på dine salgsmøder. På din egen Mac, uden en bot i mødet.</p>
+      <p class="meta">Gratis. Til en Mac med Apple Silicon (M1 eller nyere) og macOS 14.4 eller nyere.<span id="ver"></span></p>
       <div class="cta">
-        <a class="btn primary" href="#install">Install on your Mac</a>
-        <a class="btn ghost" href="#fixes">What it fixes</a>
+        <a class="btn primary" href="#install">Installér på din Mac</a>
+        <a class="btn ghost" href="#fixes">Se, hvad den løser</a>
       </div>
-      <p class="phone-note">You're on a phone. Open this page on your Mac to install it.</p>
+      <p class="phone-note">Du er på en telefon. Åbn siden på din Mac for at installere.</p>
     </div>
-    <div class="scene" aria-label="The coach's window next to a video call">
+    <div class="scene" aria-label="Coachens vindue ved siden af et videomøde">
       <div class="call">
         <div class="tb"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i></div>
         <div class="tiles">
           <div class="tile speaking"><div class="face" style="background:#4d7d0d">JM</div><span class="who">Jesper</span></div>
-          <div class="tile"><div class="face" style="background:#55637E">AH</div><span class="who">You</span></div>
+          <div class="tile"><div class="face" style="background:#55637E">AH</div><span class="who">Dig</span></div>
         </div>
         <div class="ctrl"><span></span><span></span><span class="end"></span><span></span></div>
       </div>
       <div class="menubar">● 39%</div>
-      <div class="coach"><div class="wt">Sales Coach</div><img src="img/during.png" alt="The coach's window during a call"></div>
+      <div class="coach"><div class="wt">Sales Coach</div><img src="img/during.png" alt="Coachens vindue under et møde"></div>
     </div>
   </header>
 
   <section id="fixes">
-    <h2>What it fixes</h2>
-    <p class="lead">The everyday problems of a day full of calls. These three work from the first call, with nothing to set up and no AI.</p>
+    <h2>Det løser den</h2>
+    <p class="lead">De små problemer i en dag fuld af møder. De her tre virker fra første møde, uden opsætning og uden AI.</p>
     <div class="problems">
       <div class="prob">
         <div class="vis" aria-hidden="true">
           <div class="mbar"><span class="grey"></span><span class="pill red">● +2:10</span><span>Tor 10:47</span></div>
           <div class="cuebox">Over tid +2:10: rund af nu</div>
         </div>
-        <h3>Your meetings run over time</h3>
-        <p>The meeting's own countdown, from the calendar, in the window and in the menu bar. Orange in the last minutes, red when you're over, with a nudge to wrap up and book the next step.</p>
-        <span class="noai">Works without AI</span>
+        <h3>Mødet løber over tid</h3>
+        <p>Mødets egen nedtælling fra kalenderen, i vinduet og i menulinjen. Orange de sidste minutter, rød når du er over, med et skub til at runde af og booke næste skridt.</p>
+        <span class="noai">Virker uden AI</span>
       </div>
       <div class="prob">
         <div class="vis" aria-hidden="true">
           <div class="mbar"><span class="pill red">Næste 1:58</span><span>Tor 10:58</span></div>
           <div class="menu"><div class="mi hi">Deltag: Intro med Jesper (om 2 min)</div><div class="sep"></div><div class="mi">Start telefonopkald</div><div class="mi">Vis vinduet</div></div>
         </div>
-        <h3>You forget the next meeting</h3>
-        <p>From 15 minutes before, the countdown to your next meeting sits in the menu bar, also while you're still in the last one. Two minutes before, the meeting link opens by itself.</p>
-        <span class="noai">Works without AI</span>
+        <h3>Du glemmer næste møde</h3>
+        <p>Fra 15 minutter før står nedtællingen til dit næste møde i menulinjen, også mens du stadig sidder i det forrige. To minutter før åbner mødelinket af sig selv.</p>
+        <span class="noai">Virker uden AI</span>
       </div>
       <div class="prob">
         <div class="vis" aria-hidden="true">
-          <div class="talk"><b>43%</b><span>you, the last 5 min 43%<br>target 30-45% on a first meeting</span></div>
+          <div class="talk"><b>43%</b><span>dig, de sidste 5 min 43%<br>mål 30-45% på et første møde</span></div>
           <div class="meter"><div class="band"></div><div class="fill"></div></div>
         </div>
-        <h3>You talk too much</h3>
-        <p>Your share of the talking, live, against a target for the kind of call. A first meeting wants you listening, a walkthrough lets you present. When you've talked for more than a minute in one go on a first meeting (longer on a walkthrough), it tells you to stop and ask.</p>
-        <span class="noai">Works without AI</span>
+        <h3>Du taler for meget</h3>
+        <p>Din andel af taletiden, live, mod et mål for mødetypen. Et første møde vil have dig til at lytte, en gennemgang lader dig præsentere. Taler du over et minut i træk på et første møde (længere på en gennemgang), beder den dig stoppe og spørge.</p>
+        <span class="noai">Virker uden AI</span>
       </div>
     </div>
   </section>
 
   <section id="during">
-    <h2>You forget what to ask</h2>
-    <p class="lead">With Claude on, the window also knows what this call is for. It only speaks up when it matters.</p>
+    <h2>Du glemmer, hvad du skal spørge om</h2>
+    <p class="lead">Med Claude slået til ved vinduet også, hvad mødet skal ende med. Det siger kun noget, når det betyder noget.</p>
     <div class="shot-row">
       <figure class="shot">
-        <img src="img/during.png" alt="The coach's window during a first meeting" width="720" height="1010">
+        <img src="img/during.png" alt="Coachens vindue under et første møde" width="720" height="1010">
         <span class="pin" style="top:10%">1</span>
         <span class="pin" style="top:31%">2</span>
         <span class="pin" style="top:55%">3</span>
         <span class="pin" style="top:79%">4</span>
       </figure>
       <ol class="points">
-        <li><span class="n">1</span><div><h3>The clock and the kind of call</h3>
-          <p>Time against the meeting's length, and a countdown in the menu bar near the end and before your next meeting. The kind of call (a first meeting, a walkthrough, a close) comes from the invite, and you can change it.</p></div></li>
-        <li><span class="n">2</span><div><h3>Your share of the talking</h3>
-          <p>Live, against a target for that kind of call. A first meeting wants you listening (30-45%), a walkthrough lets you present. The green band is the target.</p></div></li>
-        <li><span class="n">3</span><div><h3>One cue at a time</h3>
-          <p>A follow-up on what they just said, a number to dig into, time running out. Never a script. Here: <q>Hvad koster de ti timer om måneden jer i kroner?</q> after the other side said bookkeeping takes ten hours a month.</p></div></li>
-        <li><span class="n">4</span><div><h3>A checklist for this call</h3>
-          <p>Made from the invite and your last call with the same people, ticked off as they answer, with what is still missing. The full transcript of both sides runs further down, about 1.5 seconds behind speech.</p></div></li>
+        <li><span class="n">1</span><div><h3>Uret og mødetypen</h3>
+          <p>Tiden mod mødets længde. Mødetypen (første møde, gennemgang, lukkemøde) læses ud fra invitationen, og du kan skifte den.</p></div></li>
+        <li><span class="n">2</span><div><h3>Din taleandel</h3>
+          <p>Det grønne felt er målet for mødetypen. Den mørke streg er dig.</p></div></li>
+        <li><span class="n">3</span><div><h3>Ét stikord ad gangen</h3>
+          <p>Et opfølgende spørgsmål på det, de lige har sagt, et tal at grave i, eller at tiden er ved at løbe ud. Aldrig et manuskript. Her: <q>Hvad koster de ti timer om måneden jer i kroner?</q> lige efter, at kunden har sagt, at bogføringen tager ti timer om måneden.</p></div></li>
+        <li><span class="n">4</span><div><h3>En tjekliste til netop det her møde</h3>
+          <p>Lavet ud fra invitationen og dit sidste møde med de samme mennesker. Punkterne krydses af, når de svarer, med det, der stadig mangler. Længere nede i vinduet kører hele transskriptionen af begge sider, cirka 1,5 sekund efter det er sagt.</p></div></li>
       </ol>
     </div>
   </section>
 
-  <section>
-    <h2>You don't know how the call went</h2>
-    <p class="lead">The coach's result about ten seconds after you hang up, notes about a minute later, and over the weeks whether you get better.</p>
+  <section id="agenda">
+    <h2>Din egen dagsorden, krydset af for dig</h2>
+    <p class="lead">Sæt din dagsorden ind, et punkt pr. linje, så krydser coachen punkterne af, mens I taler om dem. På dansk og engelsk.</p>
+    <div class="shot-row">
+      <div class="agmock" aria-label="Eksempel på din dagsorden i vinduet">
+        <b>Din dagsorden</b>
+        <div class="ag done"><span class="box">✓</span><div>Rammerne for budgettet<small>afkrydset af coachen: "vi har afsat penge til foråret"</small></div></div>
+        <div class="ag done"><span class="box">✓</span><div>Hvem beslutter<small>afkrydset af dig</small></div></div>
+        <div class="ag part"><span class="box"></span><div><span class="dl">Delvist</span> Tidsplan<small>mangler: hvornår de vil i gang</small></div></div>
+        <div class="ag"><span class="box"></span><div>Næste skridt</div></div>
+        <span class="needai" style="margin-top:4px">Eksempel</span>
+      </div>
+      <ol class="points">
+        <li><span class="n">1</span><div><h3>Sæt den ind, før eller under mødet</h3>
+          <p>Før mødet gemmes den til netop det møde, og den er klar, når I går i gang. Står dagsordenen som en liste i kalenderinvitationen, læser coachen den selv.</p></div></li>
+        <li><span class="n">2</span><div><h3>Krydset af ud fra samtalen</h3>
+          <p>Coachen hører, når et punkt er dækket, og krydser det af med det, der blev sagt. Er det kun halvt dækket, står der, hvad der mangler.</p></div></li>
+        <li><span class="n">3</span><div><h3>Eller kryds selv af</h3>
+          <p>Et klik på et punkt krydser det af, eller tager krydset væk igen. Uden AI er det din egen tjekliste til mødet.</p></div></li>
+      </ol>
+    </div>
+  </section>
+
+  <section id="after">
+    <h2>Du ved ikke, hvordan mødet gik</h2>
+    <p class="lead">Coachens vurdering cirka ti sekunder efter, at du har lagt på, og noter cirka et minut efter.</p>
     <div class="shot-row">
       <figure class="shot">
-        <img src="img/after.png" alt="The coach's result after a call" width="760" height="1290">
+        <img src="img/after.png" alt="Coachens vurdering efter et møde" width="760" height="1290">
         <span class="pin" style="top:19%">1</span>
         <span class="pin" style="top:41%">2</span>
         <span class="pin" style="top:54%">3</span>
         <span class="pin" style="top:70%">4</span>
       </figure>
       <ol class="points">
-        <li><span class="n">1</span><div><h3>How the call went, in numbers</h3>
-          <p>Your talk share against the target, your longest monologue, how much of the checklist you got through.</p></div></li>
-        <li><span class="n">2</span><div><h3>One honest sentence</h3>
-          <p>What went well and what is still missing. Here: <q>Godt mål og aftalt møde, men månedsbeløbet i kroner og systemet mangler stadig.</q></p></div></li>
-        <li><span class="n">3</span><div><h3>The next meeting, ready to book</h3>
-          <p>When you agreed on a next meeting in the call, it is drafted with the time and the people. One click opens it in your calendar. Nothing is ever sent by itself.</p></div></li>
-        <li><span class="n">4</span><div><h3>Next steps and what to ask next time</h3>
-          <p>Plus one thing to practise. Over the weeks, the "Bliv bedre" page shows whether you end on time, keep your talk share on target and avoid long monologues.</p></div></li>
+        <li><span class="n">1</span><div><h3>Mødet i tal</h3>
+          <p>Din taleandel mod målet, din længste monolog og hvor meget af tjeklisten, I nåede.</p></div></li>
+        <li><span class="n">2</span><div><h3>Én ærlig sætning</h3>
+          <p>Hvad der gik godt, og hvad der stadig mangler. Her: <q>Godt mål og aftalt møde, men månedsbeløbet i kroner og systemet mangler stadig.</q></p></div></li>
+        <li><span class="n">3</span><div><h3>Næste møde, klar til at booke</h3>
+          <p>Aftalte I et næste møde, står det klar med tidspunkt og deltagere. Ét klik åbner det i din kalender. Intet bliver sendt af sig selv.</p></div></li>
+        <li><span class="n">4</span><div><h3>Næste skridt, og hvad du skal spørge om næste gang</h3>
+          <p>Plus én ting at øve dig på. Noterne med resumé, beslutninger og tal kommer et minut efter.</p></div></li>
       </ol>
     </div>
   </section>
 
-  <section>
-    <h2>Your calls stay on your Mac</h2>
-    <p class="lead">Recording and speech-to-text run on the Mac. With the AI on, only the text goes to Claude, on your own Claude account. Nothing goes to us.</p>
-    <div class="flow">
-      <div class="mac">
-        <div class="label">
-          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#4d7d0d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg>
-          On your Mac
-        </div>
-        <div class="node">
-          <svg viewBox="0 0 40 40"><rect width="40" height="40" rx="10" fill="#192230"/><rect x="16" y="9" width="8" height="14" rx="4" fill="#84CE18"/><path d="M12 20a8 8 0 0 0 16 0M20 28v4" stroke="#fff" stroke-width="2.4" fill="none" stroke-linecap="round"/></svg>
-          <div><b>Recorder</b><span>Your mic and the call audio, as two tracks, only while a call app uses the mic</span></div>
-        </div>
-        <div class="node">
-          <svg viewBox="0 0 40 40"><rect width="40" height="40" rx="10" fill="#192230"/><path d="M9 20h3M14 14v12M19 10v20M24 15v10M29 18v4" stroke="#84CE18" stroke-width="2.6" stroke-linecap="round"/></svg>
-          <div><b>Speech to text</b><span>Whisper large-v3, Danish and English, on the Mac's own chip</span></div>
-        </div>
-        <div class="node">
-          <svg viewBox="0 0 40 40"><rect width="40" height="40" rx="10" fill="#192230"/><circle cx="20" cy="20" r="9" stroke="#84CE18" stroke-width="2.6" fill="none"/><path d="M20 14v6l4 3" stroke="#fff" stroke-width="2.4" fill="none" stroke-linecap="round"/></svg>
-          <div><b>The coach</b><span>Talk meter, clock, window, call history and recordings (audio deleted after 7 days, or as you choose)</span></div>
-        </div>
+  <section id="better">
+    <h2>Bliv bedre</h2>
+    <p class="lead">Ét møde siger ikke så meget. Over ugerne kan du se, om du bliver bedre, på tre ting og ikke flere.</p>
+    <div class="shot-row">
+      <div class="growth" aria-label="Eksempel på siden Bliv bedre">
+        <b>Ugens 3 mål</b>
+        <div class="goal"><div><span class="gl">Slut til tiden</span><span class="gt">mål: alle møder</span></div><div class="dots"><i class="ok"></i><i class="ok"></i><i class="no"></i><i class="ok"></i><i class="ok"></i></div><span class="gr">4 af 5</span></div>
+        <div class="goal"><div><span class="gl">Taletid i mål</span><span class="gt">mål: 8 ud af 10</span></div><div class="dots"><i class="ok"></i><i class="no"></i><i class="ok"></i><i class="ok"></i><i class="ok"></i></div><span class="gr">4 af 5</span></div>
+        <div class="goal"><div><span class="gl">Ingen lange monologer</span><span class="gt">mål: 8 ud af 10</span></div><div class="dots"><i class="ok"></i><i class="ok"></i><i class="ok"></i><i class="ok"></i><i class="ok"></i></div><span class="gr">5 af 5</span></div>
+        <svg class="trend" viewBox="0 0 300 70" aria-hidden="true"><path d="M10 52 L80 46 L150 40 L220 28 L290 18" fill="none" stroke="#84CE18" stroke-width="4" stroke-linecap="round"/><g fill="#192230"><circle cx="10" cy="52" r="4"/><circle cx="80" cy="46" r="4"/><circle cx="150" cy="40" r="4"/><circle cx="220" cy="28" r="4"/><circle cx="290" cy="18" r="4"/></g></svg>
+        <span class="needai">Eksempel</span>
       </div>
-      <div class="arrow">
-        <svg viewBox="0 0 120 24"><path d="M4 12h106" stroke="#55637E" stroke-width="2" stroke-dasharray="5 5"/><path d="M104 5l10 7-10 7" fill="none" stroke="#55637E" stroke-width="2"/></svg>
-        text only, with the AI on
-      </div>
-      <div class="cloud">
-        <div class="node">
-          <svg viewBox="0 0 40 40"><rect width="40" height="40" rx="10" fill="#F8FAFC" stroke="#D9E0EA"/><path d="M13 26a6 6 0 0 1 1-12 8 8 0 0 1 15 2 5 5 0 0 1-1 10z" fill="none" stroke="#192230" stroke-width="2.2"/></svg>
-          <div><b>Your own Claude</b><span>Claude Code on your Claude subscription, or your own API key. The checklist, cues and notes.</span></div>
-        </div>
-        <div class="node no">
-          <svg viewBox="0 0 40 40"><rect width="40" height="40" rx="10" fill="#F8FAFC" stroke="#D9E0EA"/><path d="M13 13l14 14M27 13L13 27" stroke="#c0392b" stroke-width="2.6" stroke-linecap="round"/></svg>
-          <div><b>Nothing to us</b><span>No server of ours, no account to make, no bot joining your meeting</span></div>
-        </div>
-      </div>
+      <ol class="points">
+        <li><span class="n">1</span><div><h3>Tre mål for ugen</h3>
+          <p>Slut til tiden på alle møder. Hold taletiden inden for målet, og undgå lange monologer, på mindst 8 ud af 10 møder. Hvert møde er en prik, grøn eller rød, så du kan se præcis hvilke.</p></div></li>
+        <li><span class="n">2</span><div><h3>Udviklingen over otte uger</h3>
+          <p>Bliver det bedre eller værre? Ugerne står ved siden af hinanden, så du ser det med det samme.</p></div></li>
+        <li><span class="n">3</span><div><h3>Coachens læsning af dig</h3>
+          <p>Hvor du står lige nu i én sætning, én ting du gør godt med et eksempel fra et af dine møder, og to ting at øve med en konkret vane eller den sætning, du kan bruge.</p></div></li>
+        <li><span class="n">4</span><div><h3>Din feedback gør den bedre</h3>
+          <p>Under hver vurdering kan du trykke Nyttig eller Ikke nyttig og skrive en note. Coachen tager det med ind i de næste møder. Alle dine møder ligger under Opkald, med vurdering, noter og transskription.</p></div></li>
+      </ol>
     </div>
   </section>
 
   <section id="gdpr">
-    <h2>Recording people, done right</h2>
-    <p class="lead">GDPR asks you to tell people you record, to keep it no longer than you need, and to delete it when they ask. The coach does the remembering for you.</p>
+    <h2>Optag folk ordentligt</h2>
+    <p class="lead">GDPR kræver, at du fortæller folk, at du optager, at du ikke gemmer det længere end nødvendigt, og at du sletter det, når de beder om det. Coachen klarer det for dig.</p>
     <div class="gdpr">
       <div>
-        <img class="cardimg" src="img/notice.png" alt="The reminder at the start of a call: tell them you record, with a ready message for the chat">
-        <div class="menu switches" aria-label="The switches under Coach in the menu bar">
-          <div class="mi">Slet lyden<span>›</span></div>
-          <div class="mi" style="padding-left:22px">Lige efter opkaldet</div>
-          <div class="mi" style="padding-left:22px">Efter 7 dage<span class="ck">✓</span></div>
-          <div class="mi" style="padding-left:22px">Efter 30 dage</div>
-          <div class="sep"></div>
+        <div class="chat" aria-label="Beskeden i Google Meets chat">
+          <div class="ch">Beskeder i opkaldet</div>
+          <div class="msg"><b>Dig</b> <span>10:01</span><p>Hej! Jeg optager vores samtale lokalt på min computer, så jeg kan skrive noter bagefter. Den deles ikke, men en AI-assistent (Claude) hjælper mig med noterne, og lyden slettes efter 7 dage. Sig endelig til, hvis du hellere vil have, at jeg ikke optager.</p></div>
+          <div class="in">Send en besked</div>
+        </div>
+        <div class="menu switches" aria-label="Kontakterne under Coach i menulinjen">
+          <div class="mi">Slet lyden<span>Efter 7 dage ›</span></div>
           <div class="mi">Slet noter og udskrift<span>Efter 1 år ›</span></div>
-          <div class="mi">Mind mig om at sige, at jeg optager<span class="ck">✓</span></div>
+          <div class="mi">Fortæl dem, at jeg optager<span class="ck">✓</span></div>
+          <div class="mi" style="padding-left:22px">Skriv det selv i Meet-chatten<span class="ck">✓</span></div>
+          <div class="sep"></div>
           <div class="mi" style="color:#c0392b">Stop og slet dette opkald...</div>
         </div>
       </div>
       <ol class="points">
-        <li><span class="n">1</span><div><h3>Tell them, on every call</h3>
-          <p>When a call starts, the window asks you to tell them. One click copies a short message to paste in the meeting's chat with <kbd>⌘</kbd> <kbd>V</kbd> (Meet, Zoom, Teams, Slack), or tick that you said it out loud. How and when you told them is saved with the call.</p></div></li>
-        <li><span class="n">2</span><div><h3>If they say no</h3>
-          <p>"Stop og slet" stops the recording at once and deletes everything from that call: audio, transcript, notes and the result. It doesn't start again until the call is over.</p></div></li>
-        <li><span class="n">3</span><div><h3>Kept no longer than needed</h3>
-          <p>You choose: the audio goes right after the call, or after 7 or 30 days (7 is the default). Transcripts and notes after 30 days, 90 days, a year, or when you delete them.</p></div></li>
-        <li><span class="n">4</span><div><h3>Deleted when they ask</h3>
-          <p>Every saved call has a "Slet opkaldet" button: the recording, the notes and your feedback on it are gone.</p></div></li>
+        <li><span class="n">1</span><div><h3>Det bliver sagt for dig</h3>
+          <p>I Google Meet skriver coachen selv beskeden i mødets chat, så snart den anden part er med, ligesom en optagerbot gør. I Zoom, Teams og andre kopierer ét klik beskeden, så du sætter den ind med <kbd>⌘</kbd> <kbd>V</kbd>. Hvordan og hvornår de fik besked, gemmes med mødet.</p></div></li>
+        <li><span class="n">2</span><div><h3>Hvis de siger nej</h3>
+          <p>"Stop og slet" stopper optagelsen med det samme og sletter alt fra mødet: lyd, transskription, noter og vurdering. Den starter ikke igen, før mødet er slut.</p></div></li>
+        <li><span class="n">3</span><div><h3>Ikke gemt længere end nødvendigt</h3>
+          <p>Du vælger selv: lyden slettes lige efter mødet eller efter 7 eller 30 dage (7 er standard). Transskription og noter efter 30 dage, 90 dage, et år, eller når du selv sletter dem.</p></div></li>
+        <li><span class="n">4</span><div><h3>Slettet, når de beder om det</h3>
+          <p>Hvert gemt møde har en knap, "Slet opkaldet". Så er optagelsen, noterne og din feedback på mødet væk.</p></div></li>
       </ol>
     </div>
-    <p class="small">This helps you follow the rules; it isn't legal advice. You are the one recording, so you decide why and for how long. With the AI on, the text of the call goes to Anthropic (the company behind Claude): the standard message says so, and check that your Claude plan's terms fit business use.</p>
+    <p class="small">Det her hjælper dig med at følge reglerne, men det er ikke juridisk rådgivning. Det er dig, der optager, så du bestemmer hvorfor og hvor længe. Med AI'en slået til går teksten fra mødet til Anthropic, firmaet bag Claude. Det står i beskeden, og tjek, at vilkårene for din Claude-plan passer til erhvervsbrug.</p>
+  </section>
+
+  <section>
+    <h2>Dine møder bliver på din Mac</h2>
+    <p class="lead">Optagelsen og omsætningen til tekst sker på Mac'en. Med AI'en slået til går kun teksten til Claude, på din egen Claude-konto. Intet går til os.</p>
+    <div class="flow">
+      <div class="mac">
+        <div class="label">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#4d7d0d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg>
+          På din Mac
+        </div>
+        <div class="node">
+          <svg viewBox="0 0 40 40"><rect width="40" height="40" rx="10" fill="#192230"/><rect x="16" y="9" width="8" height="14" rx="4" fill="#84CE18"/><path d="M12 20a8 8 0 0 0 16 0M20 28v4" stroke="#fff" stroke-width="2.4" fill="none" stroke-linecap="round"/></svg>
+          <div><b>Optageren</b><span>Din mikrofon og lyden fra mødet som to spor, kun mens en mødeapp bruger mikrofonen</span></div>
+        </div>
+        <div class="node">
+          <svg viewBox="0 0 40 40"><rect width="40" height="40" rx="10" fill="#192230"/><path d="M9 20h3M14 14v12M19 10v20M24 15v10M29 18v4" stroke="#84CE18" stroke-width="2.6" stroke-linecap="round"/></svg>
+          <div><b>Tale til tekst</b><span>Whisper large-v3, dansk og engelsk, på Mac'ens egen chip</span></div>
+        </div>
+        <div class="node">
+          <svg viewBox="0 0 40 40"><rect width="40" height="40" rx="10" fill="#192230"/><circle cx="20" cy="20" r="9" stroke="#84CE18" stroke-width="2.6" fill="none"/><path d="M20 14v6l4 3" stroke="#fff" stroke-width="2.4" fill="none" stroke-linecap="round"/></svg>
+          <div><b>Coachen</b><span>Taletid, ur, vinduet, historikken og optagelserne (lyden slettes efter 7 dage, eller som du vælger)</span></div>
+        </div>
+      </div>
+      <div class="arrow">
+        <svg viewBox="0 0 120 24"><path d="M4 12h106" stroke="#55637E" stroke-width="2" stroke-dasharray="5 5"/><path d="M104 5l10 7-10 7" fill="none" stroke="#55637E" stroke-width="2"/></svg>
+        kun tekst, med AI'en slået til
+      </div>
+      <div class="cloud">
+        <div class="node">
+          <svg viewBox="0 0 40 40"><rect width="40" height="40" rx="10" fill="#F8FAFC" stroke="#D9E0EA"/><path d="M13 26a6 6 0 0 1 1-12 8 8 0 0 1 15 2 5 5 0 0 1-1 10z" fill="none" stroke="#192230" stroke-width="2.2"/></svg>
+          <div><b>Din egen Claude</b><span>Claude Code på dit Claude-abonnement, eller din egen API-nøgle. Tjekliste, stikord og noter.</span></div>
+        </div>
+        <div class="node no">
+          <svg viewBox="0 0 40 40"><rect width="40" height="40" rx="10" fill="#F8FAFC" stroke="#D9E0EA"/><path d="M13 13l14 14M27 13L13 27" stroke="#c0392b" stroke-width="2.6" stroke-linecap="round"/></svg>
+          <div><b>Intet til os</b><span>Ingen server hos os, ingen konto at oprette, ingen bot i dit møde</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="all">
+    <h2>Alt det, den kan</h2>
+    <p class="lead">Det hele på én liste. Det med <span class="tag">AI</span> bruger Claude, resten virker uden.</p>
+    <div class="all">
+      <div><h3>Under mødet</h3><ul>
+        <li>Nedtælling til mødets slut, i vinduet og menulinjen</li>
+        <li>Din taleandel live, mod et mål for mødetypen</li>
+        <li>Besked, når du taler for længe i træk</li>
+        <li>Transskription af begge sider, dansk og engelsk</li>
+        <li>Telefonopkald på højttaler: start og stop i menuen</li>
+        <li>Din egen dagsorden, til at krydse af</li>
+        <li>Dagsordenen krydset af ud fra samtalen <span class="tag">AI</span></li>
+        <li>Tjekliste ud fra invitationen og sidste møde <span class="tag">AI</span></li>
+        <li>Ét stikord ad gangen, når det betyder noget <span class="tag">AI</span></li>
+      </ul></div>
+      <div><h3>Mellem møderne</h3><ul>
+        <li>Nedtælling til næste møde fra 15 minutter før</li>
+        <li>Mødelinket åbner af sig selv 2 minutter før</li>
+        <li>Dagsorden til næste møde, gemt til det starter</li>
+        <li>Forberedelse til dine næste møder: hvem, mål og hvad der stadig er ubesvaret <span class="tag">AI</span></li>
+        <li>Vinduet følger med til hvert møde, ved siden af det</li>
+      </ul></div>
+      <div><h3>Efter mødet</h3><ul>
+        <li>Mødet i tal: taleandel, længste monolog, tjekliste</li>
+        <li>Vurdering 10 sekunder efter <span class="tag">AI</span></li>
+        <li>Næste møde klar til at booke i din kalender <span class="tag">AI</span></li>
+        <li>Noter et minut efter: resumé, næste skridt, beslutninger <span class="tag">AI</span></li>
+        <li>Alle dine møder under Opkald</li>
+        <li>Bliv bedre: tre mål og otte ugers udvikling</li>
+        <li>Coachens læsning af dig og hvad du skal øve <span class="tag">AI</span></li>
+      </ul></div>
+      <div><h3>Optagelser og privatliv</h3><ul>
+        <li>Skriver selv i Google Meets chat, at du optager</li>
+        <li>Kopiér beskeden til Zoom, Teams og andre</li>
+        <li>Stop og slet et møde, mens det kører</li>
+        <li>Slet lyden og noterne efter det antal dage, du vælger</li>
+        <li>Slet et gemt møde med ét klik</li>
+        <li>Alt bliver på din Mac, AI'en kører på din egen Claude</li>
+      </ul></div>
+    </div>
   </section>
 
   <section id="advanced">
-    <h2>Advanced: plug in your own systems</h2>
-    <p class="lead">Where it gets really good: connected to your mail, text messages and customer list, the coach knows who you're talking to before the call, and keeps your systems up to date after it. This is how we run it at RM Marketing.</p>
+    <h2>Avanceret: kobl dine egne systemer på</h2>
+    <p class="lead">Her bliver det rigtig godt. Koblet på din mail, dine sms'er og din kundeliste ved coachen, hvem du taler med, før mødet starter, og holder dine systemer opdateret bagefter. Sådan kører vi den selv hos RM Marketing.</p>
     <div class="hub">
       <div class="col">
-        <div class="src"><svg viewBox="0 0 24 24" fill="none" stroke="#192230" stroke-width="2" stroke-linecap="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg><div><b>Your mail</b><span>what you've written with them</span></div></div>
-        <div class="src"><svg viewBox="0 0 24 24" fill="none" stroke="#192230" stroke-width="2" stroke-linecap="round"><path d="M4 5h16v11H9l-5 4z"/></svg><div><b>Text messages</b><span>the quick back-and-forth</span></div></div>
-        <div class="src"><svg viewBox="0 0 24 24" fill="none" stroke="#192230" stroke-width="2" stroke-linecap="round"><circle cx="9" cy="8" r="3"/><path d="M3 19a6 6 0 0 1 12 0M16 11h5M16 15h5M16 7h5"/></svg><div><b>Customer list or CRM</b><span>who they are, where they are in the process</span></div></div>
+        <div class="src"><svg viewBox="0 0 24 24" fill="none" stroke="#192230" stroke-width="2" stroke-linecap="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg><div><b>Din mail</b><span>det, I har skrevet sammen</span></div></div>
+        <div class="src"><svg viewBox="0 0 24 24" fill="none" stroke="#192230" stroke-width="2" stroke-linecap="round"><path d="M4 5h16v11H9l-5 4z"/></svg><div><b>Sms</b><span>de hurtige beskeder frem og tilbage</span></div></div>
+        <div class="src"><svg viewBox="0 0 24 24" fill="none" stroke="#192230" stroke-width="2" stroke-linecap="round"><circle cx="9" cy="8" r="3"/><path d="M3 19a6 6 0 0 1 12 0M16 11h5M16 15h5M16 7h5"/></svg><div><b>Kundeliste eller CRM</b><span>hvem de er, og hvor langt I er</span></div></div>
       </div>
       <div class="center"><img src="img/icon.png" alt="Sales Coach"></div>
       <div class="col">
-        <div class="src"><svg viewBox="0 0 24 24" fill="none" stroke="#4d7d0d" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><div><b>Before the call</b><span>who they are, where you left off, what's still unanswered</span></div></div>
-        <div class="src"><svg viewBox="0 0 24 24" fill="none" stroke="#4d7d0d" stroke-width="2" stroke-linecap="round"><path d="M12 3v3M5 12H2M22 12h-3M6 6l2 2M18 6l-2 2"/><circle cx="12" cy="14" r="5"/></svg><div><b>During it</b><span>tips on what to ask now, from what you already know about them</span></div></div>
-        <div class="src"><svg viewBox="0 0 24 24" fill="none" stroke="#4d7d0d" stroke-width="2" stroke-linecap="round"><path d="M4 12l5 5L20 6"/></svg><div><b>After it</b><span>your notes and next steps updated in the right places</span></div></div>
+        <div class="src"><svg viewBox="0 0 24 24" fill="none" stroke="#4d7d0d" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><div><b>Før mødet</b><span>hvem de er, hvor I slap, og hvad der stadig er ubesvaret</span></div></div>
+        <div class="src"><svg viewBox="0 0 24 24" fill="none" stroke="#4d7d0d" stroke-width="2" stroke-linecap="round"><path d="M12 3v3M5 12H2M22 12h-3M6 6l2 2M18 6l-2 2"/><circle cx="12" cy="14" r="5"/></svg><div><b>Under mødet</b><span>tips til, hvad du skal spørge om nu, ud fra det, du allerede ved om dem</span></div></div>
+        <div class="src"><svg viewBox="0 0 24 24" fill="none" stroke="#4d7d0d" stroke-width="2" stroke-linecap="round"><path d="M4 12l5 5L20 6"/></svg><div><b>Efter mødet</b><span>noter og næste skridt opdateret de rigtige steder</span></div></div>
       </div>
     </div>
-    <p class="small">This part takes an add-on: a small file that connects your own systems. We're making it easier to set up; until then, it's for the technically curious. <a href="https://github.com/rmmarketingmcc/sales-coach/issues/new">Tell us what you use</a>.</p>
+    <p class="small">Den del kræver en tilføjelse: en lille fil, der kobler dine egne systemer på. Vi arbejder på at gøre den nemmere at sætte op, og indtil da er den for de teknisk nysgerrige. <a href="https://github.com/rmmarketingmcc/sales-coach/issues/new">Fortæl os, hvad du bruger</a>.</p>
   </section>
 
   <section id="install">
-    <h2>Install it</h2>
-    <p class="lead">About ten minutes the first time, mostly the speech model (about 6 GB, downloaded once). No admin password.</p>
+    <h2>Installér den</h2>
+    <p class="lead">Cirka ti minutter første gang, mest talemodellen (cirka 6 GB, hentes én gang). Ingen administratoradgangskode.</p>
     <div class="steps">
       <div class="step">
         <div>
-          <h3>Open Terminal</h3>
-          <p>Press <kbd>⌘</kbd> <kbd>Space</kbd>, type <b>Terminal</b> and press <kbd>Return</kbd>.</p>
+          <h3>Åbn Terminal</h3>
+          <p>Tryk <kbd>⌘</kbd> <kbd>Mellemrum</kbd>, skriv <b>Terminal</b> og tryk <kbd>Retur</kbd>.</p>
         </div>
         <div class="mock">
           <div class="spot">
@@ -482,60 +605,61 @@
       </div>
       <div class="step">
         <div class="cmd">
-          <h3>Paste this line and press Return</h3>
+          <h3>Sæt linjen ind og tryk Retur</h3>
           <code id="line">curl -fsSL https://rmmarketingmcc.github.io/sales-coach/install.sh | bash</code>
-          <button class="btn primary" id="copy" type="button">Copy the line</button>
+          <button class="btn primary" id="copy" type="button">Kopiér linjen</button>
         </div>
         <div class="mock">
           <div class="term">
             <div class="tb"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i></div>
-<pre><span class="b">Downloading Sales Coach...</span>
+<pre><span class="b">Henter Sales Coach...</span>
 Version 0.2.0
-<span class="b">Setting up the coach...</span>
-<span class="b">Downloading the speech model...</span>
-<span class="ok">Speech model ready.</span></pre>
+<span class="b">Gør coachen klar...</span>
+<span class="b">Henter talemodellen...</span>
+<span class="ok">Talemodellen er klar.</span></pre>
           </div>
         </div>
       </div>
       <div class="step">
         <div>
-          <h3>Answer four questions</h3>
-          <p>Your name, your company, what you sell in one line, and the language of your calls (Danish or English). The coach uses them to tell you apart from the other side and to know what a good call looks like for you.</p>
-          <p>If you have <a href="https://claude.com/claude-code">Claude Code</a>, it is found by itself. Otherwise you can paste an Anthropic API key, or skip it: the talk meter, transcript and clock work without.</p>
+          <h3>Svar på fire spørgsmål</h3>
+          <p>Dit navn, dit firma, hvad du sælger i én linje, og sproget i dine møder (dansk eller engelsk). Så kan coachen skelne dig fra den anden part og ved, hvordan et godt møde ser ud for dig.</p>
+          <p>Har du <a href="https://claude.com/claude-code">Claude Code</a>, finder den det selv. Ellers kan du sætte en API-nøgle fra Anthropic ind, eller springe over: taletid, transskription og ur virker uden.</p>
         </div>
         <div class="mock">
           <div class="term">
             <div class="tb"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i></div>
-<pre>Your name: <span class="ok">Anna Holm</span>
-Your company: <span class="ok">Holm Rådgivning</span>
-What you sell, in one line: <span class="ok">Bookkeeping for small firms</span>
-The language of your calls [da]: <span class="ok">da</span>
-<span class="b">Claude Code found.</span></pre>
+<pre>Dit navn: <span class="ok">Anna Holm</span>
+Dit firma: <span class="ok">Holm Rådgivning</span>
+Hvad du sælger, i én linje: <span class="ok">Bogføring til små firmaer</span>
+Sproget i dine møder [da]: <span class="ok">da</span>
+<span class="b">Claude Code fundet.</span></pre>
           </div>
         </div>
       </div>
       <div class="step">
         <div>
-          <h3>Allow three things</h3>
-          <p>macOS asks once for each. Click <b>Allow</b>. Two short sounds play to test that the recording works; the test is not kept.</p>
+          <h3>Giv lov til tre ting</h3>
+          <p>macOS spørger én gang for hver. Tryk <b>Tillad</b>. To korte lyde tester, at optagelsen virker, og testen bliver ikke gemt.</p>
+          <p>Bruger du Google Meet i Chrome: vælg én gang <b>Se &gt; Udvikler &gt; Tillad JavaScript via Apple Events</b>, så coachen kan skrive i mødets chat. I Safari hedder det Udvikler &gt; Tillad JavaScript fra Apple Events.</p>
         </div>
         <div class="mock">
           <div class="three">
-            <div><svg viewBox="0 0 24 24" fill="none" stroke="#192230" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>Microphone<span class="ok">Allow</span></div>
-            <div><svg viewBox="0 0 24 24" fill="none" stroke="#192230" stroke-width="2" stroke-linecap="round"><path d="M4 10v4M8 7v10M12 4v16M16 8v8M20 11v2"/></svg>Call audio<span class="ok">Allow</span></div>
-            <div><svg viewBox="0 0 24 24" fill="none" stroke="#192230" stroke-width="2" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Calendar<span class="ok">Allow</span></div>
+            <div><svg viewBox="0 0 24 24" fill="none" stroke="#192230" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>Mikrofon<span class="ok">Tillad</span></div>
+            <div><svg viewBox="0 0 24 24" fill="none" stroke="#192230" stroke-width="2" stroke-linecap="round"><path d="M4 10v4M8 7v10M12 4v16M16 8v8M20 11v2"/></svg>Lyden fra mødet<span class="ok">Tillad</span></div>
+            <div><svg viewBox="0 0 24 24" fill="none" stroke="#192230" stroke-width="2" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Kalender<span class="ok">Tillad</span></div>
           </div>
         </div>
       </div>
       <div class="step">
         <div>
-          <h3>Join a call</h3>
-          <p>From now on it runs by itself: when a call starts in Meet, Zoom, Teams or any other call app, the coach opens next to it. "Coach" in the menu bar shows your talk share and has the switches.</p>
+          <h3>Gå til et møde</h3>
+          <p>Fra nu af kører den af sig selv. Når et møde starter i Meet, Zoom, Teams eller en anden mødeapp, åbner coachen ved siden af det. "Coach" i menulinjen viser din taleandel og har kontakterne.</p>
         </div>
         <div class="mock">
           <div class="bar">
-            <div class="strip"><span class="grey"></span><span class="me">● 39%</span><span>Thu 10:04</span></div>
-            <div class="desk">Your call</div>
+            <div class="strip"><span class="grey"></span><span class="me">● 39%</span><span>Tor 10:04</span></div>
+            <div class="desk">Dit møde</div>
           </div>
         </div>
       </div>
@@ -543,69 +667,67 @@ The language of your calls [da]: <span class="ok">da</span>
   </section>
 
   <section>
-    <h2>What you need</h2>
+    <h2>Det skal du bruge</h2>
     <div class="cards">
       <div class="card">
-        <h3>On the Mac</h3>
+        <h3>På Mac'en</h3>
         <ul>
-          <li>A Mac with Apple Silicon (M1 or newer)</li>
-          <li>macOS 14.4 or newer</li>
-          <li>About 9 GB free the first time</li>
+          <li>En Mac med Apple Silicon (M1 eller nyere)</li>
+          <li>macOS 14.4 eller nyere</li>
+          <li>Cirka 9 GB fri plads første gang</li>
         </ul>
       </div>
       <div class="card">
-        <h3>For the checklist, cues and notes</h3>
+        <h3>Til tjekliste, stikord og noter</h3>
         <ul>
-          <li><a href="https://claude.com/claude-code">Claude Code</a>, signed in on your Claude subscription</li>
-          <li>or an Anthropic API key (you pay Anthropic for what you use)</li>
-          <li>Without either: talk meter, transcript and clock</li>
+          <li><a href="https://claude.com/claude-code">Claude Code</a>, logget ind på dit Claude-abonnement</li>
+          <li>eller en API-nøgle fra Anthropic (du betaler Anthropic for det, du bruger)</li>
+          <li>Uden nogen af dem: taletid, transskription og ur</li>
         </ul>
       </div>
     </div>
-    <div class="apps" aria-label="Works with">
-      <span>Google Meet</span><span>Zoom</span><span>Microsoft Teams</span><span>Slack</span><span>FaceTime</span><span>WhatsApp</span><span>Phone calls on speaker</span>
+    <div class="apps" aria-label="Virker med">
+      <span>Google Meet</span><span>Zoom</span><span>Microsoft Teams</span><span>Slack</span><span>FaceTime</span><span>WhatsApp</span><span>Telefonopkald på højttaler</span>
     </div>
   </section>
 
   <section>
-    <h2>Questions</h2>
-    <details class="faq"><summary>Does the other side see it?</summary>
-      <div>No bot joins and nothing is added to the call: the coach is a window on your Mac. If you share your whole screen, they can see the window, so share a window or a tab instead.</div></details>
-    <details class="faq"><summary>Can I record people without telling them?</summary>
-      <div>No. Tell the people you talk to that you record; the coach reminds you on every call and gives you a message for the chat. See <a href="#gdpr">Recording people, done right</a>.</div></details>
-    <details class="faq"><summary>Can it write in the meeting chat by itself?</summary>
-      <div>No. Meet, Zoom and Teams don't let other apps write in their chat, and typing for you would need extra Mac permissions and break whenever they change their layout. So it copies the message, and you paste it with ⌘V: one keystroke.</div></details>
-    <details class="faq"><summary>Which languages?</summary>
-      <div>Calls in Danish or English. The window itself is in Danish for now; English is next.</div></details>
-    <details class="faq"><summary>Where are my recordings?</summary>
-      <div>In the folder <code>CallRecordings</code> in your home folder. After each call the audio is compressed, and deleted after 7 days unless you choose otherwise. Transcripts and notes stay a year by default. Both are switches under "Coach" in the menu bar.</div></details>
-    <details class="faq"><summary>A phone call, not a video call?</summary>
-      <div>Put the phone on speaker and choose "Start telefonopkald" under "Coach" in the menu bar. Both voices are then recorded through the Mac's microphone.</div></details>
-    <details class="faq"><summary>How do I update it?</summary>
-      <div>Run the same line in Terminal again. Your settings and calls stay. What changed is under <a href="#news">What's new</a>.</div></details>
-    <details class="faq"><summary>How do I remove it?</summary>
-      <div>Run this in Terminal: <code>curl -fsSL https://rmmarketingmcc.github.io/sales-coach/install.sh | bash -s -- --uninstall</code>. Your recordings stay in CallRecordings until you delete the folder.</div></details>
-    <details class="faq"><summary>Something doesn't work</summary>
-      <div>Choose "Rapportér et problem" under "Coach" in the menu bar. It opens a report on GitHub with the technical details filled in (never your name, company or calls), or <a href="https://github.com/rmmarketingmcc/sales-coach/issues/new">write one here</a>.</div></details>
+    <h2>Spørgsmål</h2>
+    <details class="faq"><summary>Kan den anden part se den?</summary>
+      <div>Der kommer ingen bot med i mødet, og intet bliver lagt ind i mødet: coachen er et vindue på din Mac. Deler du hele skærmen, kan de se vinduet, så del et vindue eller en fane i stedet.</div></details>
+    <details class="faq"><summary>Skal jeg selv fortælle, at jeg optager?</summary>
+      <div>I Google Meet skriver coachen det selv i chatten. I andre mødeapps kopierer ét klik beskeden, og du sætter den ind. Se <a href="#gdpr">Optag folk ordentligt</a>.</div></details>
+    <details class="faq"><summary>Hvilke sprog?</summary>
+      <div>Møderne kan være på dansk eller engelsk. Vinduet, menuerne og beskeden til chatten er på dansk.</div></details>
+    <details class="faq"><summary>Hvor ligger mine optagelser?</summary>
+      <div>I mappen <code>CallRecordings</code> i din hjemmemappe. Efter hvert møde bliver lyden pakket sammen, og den slettes efter 7 dage, medmindre du vælger noget andet. Transskription og noter bliver et år som standard. Begge dele er kontakter under "Coach" i menulinjen.</div></details>
+    <details class="faq"><summary>Et telefonopkald, ikke et videomøde?</summary>
+      <div>Sæt telefonen på højttaler, og vælg "Start telefonopkald" under "Coach" i menulinjen. Så optages begge stemmer gennem Mac'ens mikrofon.</div></details>
+    <details class="faq"><summary>Hvordan opdaterer jeg den?</summary>
+      <div>Kør den samme linje i Terminal igen. Dine indstillinger og møder bliver liggende. Hvad der er nyt, står under <a href="#news">Nyt</a>.</div></details>
+    <details class="faq"><summary>Hvordan fjerner jeg den?</summary>
+      <div>Kør det her i Terminal: <code>curl -fsSL https://rmmarketingmcc.github.io/sales-coach/install.sh | bash -s -- --uninstall</code>. Dine optagelser bliver i CallRecordings, til du selv sletter mappen.</div></details>
+    <details class="faq"><summary>Noget virker ikke</summary>
+      <div>Vælg "Rapportér et problem" under "Coach" i menulinjen. Den åbner en fejlrapport på GitHub med de tekniske detaljer udfyldt (aldrig dit navn, dit firma eller dine møder), eller <a href="https://github.com/rmmarketingmcc/sales-coach/issues/new">skriv en her</a>.</div></details>
   </section>
 
   <section id="news">
-    <h2>What's new</h2>
-    <div class="news" id="newslist"><p class="lead">See the <a href="https://github.com/rmmarketingmcc/sales-coach/releases">releases on GitHub</a>.</p></div>
+    <h2>Nyt</h2>
+    <div class="news" id="newslist"><p class="lead">Se <a href="https://github.com/rmmarketingmcc/sales-coach/releases">versionerne på GitHub</a>.</p></div>
   </section>
 
   <footer>
-    <div class="made">Made by <a href="https://rm-marketing.dk" aria-label="RM Marketing"><img src="img/rm-logo.png" alt="RM Marketing"></a></div>
-    <p class="lead" style="margin:12px 0 0">Built for our own sales calls at RM Marketing, and shared with friends while we keep improving it.</p>
+    <div class="made">Lavet af <a href="https://rm-marketing.dk" aria-label="RM Marketing"><img src="img/rm-logo.png" alt="RM Marketing"></a></div>
+    <p class="lead" style="margin:12px 0 0">Bygget til vores egne salgsmøder hos RM Marketing og delt med venner, mens vi bliver ved med at gøre den bedre.</p>
     <div class="links">
-      <a href="https://github.com/rmmarketingmcc/sales-coach">Source on GitHub</a>
-      <a href="https://github.com/rmmarketingmcc/sales-coach/issues/new">Report a problem</a>
-      <a href="#install">Install</a>
+      <a href="https://github.com/rmmarketingmcc/sales-coach">Kildekoden på GitHub</a>
+      <a href="https://github.com/rmmarketingmcc/sales-coach/issues/new">Rapportér et problem</a>
+      <a href="#install">Installér</a>
     </div>
   </footer>
 </main>
 <script>
-  // the version and "What's new" come from docs/changelog.json, which every release writes
+  // versionen og "Nyt" kommer fra docs/changelog.json, som hver udgivelse skriver
   fetch("changelog.json", {cache: "no-store"}).then((r) => r.json()).then((versions) => {
     if (!versions.length) return;
     const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"}[c]));
@@ -619,9 +741,9 @@ The language of your calls [da]: <span class="ok">da</span>
   const copy = document.getElementById("copy");
   copy.addEventListener("click", async () => {
     const text = document.getElementById("line").textContent;
-    try { await navigator.clipboard.writeText(text); copy.textContent = "Copied. Paste it in Terminal"; }
-    catch (e) { copy.textContent = "Select the line above and copy it"; }
-    setTimeout(() => { copy.textContent = "Copy the line"; }, 3000);
+    try { await navigator.clipboard.writeText(text); copy.textContent = "Kopieret. Sæt den ind i Terminal"; }
+    catch (e) { copy.textContent = "Markér linjen ovenfor og kopiér den"; }
+    setTimeout(() => { copy.textContent = "Kopiér linjen"; }, 3000);
   });
 </script>
 </body>
