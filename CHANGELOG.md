@@ -1,5 +1,15 @@
 # Ændringer
 
+## 0.2.0 (5 Nov 2026)
+
+- Installér den med én linje i Terminal
+- Læser dine møder fra Mac'ens egen kalender (Google, Outlook og iCloud)
+- Skriver selv i Google Meet-chatten, at du optager, med Stop og slet og sletning efter det antal dage, du vælger
+- Din egen dagsorden, krydset af ud fra samtalen, og dine egne noter, klar til en AI-chat
+- Måler pausen efter dine spørgsmål og siger til, når du taler for meget eller for lidt
+- 13 mødetyper og dine egne, og du kan sige til coachen, hvad du vil blive bedre til
+- Rapportér et problem fra menulinjen
+
 ## 0.1.0 (5 Nov 2026)
 
 - Coachen kører af sig selv: indstillinger for dit navn, firma og sprog, AI på din egen Claude (Claude Code eller din egen API-nøgle) eller slået fra, møder fra kalenderen og tilføjelser til dine egne data.
