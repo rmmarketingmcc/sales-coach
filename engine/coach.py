@@ -79,6 +79,12 @@ CALL_TYPES = {
     "walkthrough": {"da": "Gennemgang",   "en": "Walkthrough",    "target": (45, 60), "stretch": 150, "sales": True},
     "close":       {"da": "Lukkemøde",    "en": "Closing call",   "target": (35, 50), "stretch": 90,  "sales": True},
     "partner":     {"da": "Partner",      "en": "Partner",        "target": (40, 55), "stretch": 90,  "sales": True},
+    "negotiation": {"da": "Forhandling",  "en": "Negotiation",    "target": (35, 50), "stretch": 90,  "sales": True},
+    "interview":   {"da": "Jobsamtale",   "en": "Job interview",  "target": (25, 40), "stretch": 90,  "sales": False},
+    "one_on_one":  {"da": "1:1-samtale",  "en": "One-on-one",     "target": (30, 45), "stretch": 90,  "sales": False},
+    "coaching":    {"da": "Sparring",     "en": "Advice session", "target": (35, 55), "stretch": 120, "sales": False},
+    "support":     {"da": "Kundeservice", "en": "Support call",   "target": (30, 50), "stretch": 90,  "sales": False},
+    "presentation": {"da": "Oplæg",       "en": "Presentation",   "target": (70, 90), "stretch": 900, "sales": False},
     "review":      {"da": "Kundemøde",    "en": "Client meeting", "target": (40, 55), "stretch": 120, "sales": False},
     "internal":    {"da": "Team",         "en": "Team",           "target": None,     "stretch": 150, "sales": False},
     "other":       {"da": "Andet",        "en": "Other",          "target": (40, 55), "stretch": 120, "sales": False},
@@ -97,14 +103,47 @@ DEFAULT_AGENDA = {
                 ("Pris og næste skridt", "Price and next step", 3)],
     "review": [("Åbning", "Opening", 1), ("Resultater siden sidst", "Results since last time", 5),
                ("Åbne spørgsmål og beslutninger", "Open questions and decisions", 5), ("Næste skridt og dato", "Next step and date", 1)],
+    "negotiation": [("Åbning og rammer", "Opening and frame", 1), ("Deres krav", "Their requirements", 3),
+                    ("Vores forslag", "Our proposal", 3), ("Aftale og næste skridt", "Agreement and next step", 3)],
+    "interview": [("Velkomst og rammer", "Welcome and frame", 1), ("Kandidatens erfaring", "The candidate's experience", 5),
+                  ("Kandidatens spørgsmål", "The candidate's questions", 2), ("Næste skridt", "Next step", 1)],
+    "one_on_one": [("Hvordan går det", "How are things", 2), ("Deres punkter", "Their points", 4), ("Mine punkter", "My points", 2),
+                   ("Aftaler", "Agreements", 1)],
+    "coaching": [("Hvad skal du have ud af i dag", "What you want from today", 2), ("Situationen", "The situation", 4),
+                 ("Muligheder", "Options", 3), ("Første skridt", "First step", 1)],
+    "support": [("Problemet", "The problem", 3), ("Løsningen", "The fix", 4), ("Er det løst", "Is it solved", 1)],
+    "presentation": [("Åbning", "Opening", 1), ("Oplægget", "The talk", 7), ("Spørgsmål", "Questions", 2)],
 }
 TITLE_TYPES = [
+    (r"jobsamtale|ansættelsessamtale|job interview|interview", "interview"),
+    (r"webinar|oplæg|foredrag|keynote", "presentation"),
+    (r"forhandling|negotiation", "negotiation"),
+    (r"medarbejdersamtale|\bmus\b|1-on-1|one-on-one|\b1:1\b", "one_on_one"),
     (r"gennemgang|walkthrough|præsentation|presentation|demo", "walkthrough"),
     (r"tilbud|offer|proposal|closing", "close"),
     (r"intro|kemi|discovery|første|first call", "discovery"),
     (r"månedlig|monthly|biweekly|bi-weekly|ugentlig|weekly|status|review|kvartal|quarterly", "review"),
-    (r"1-on-1|one-on-one|1:1|standup|team", "internal"),
+    (r"\bsupport\b|kundeservice|helpdesk", "support"),
+    (r"\bsparring\b|\bcoaching\b|konsultation", "coaching"),
+    (r"standup|team", "internal"),
 ]
+BUILT_IN_TYPES = set(CALL_TYPES)
+
+
+def apply_my_types(settings: dict) -> None:
+    """Your own meeting types (settings "my_types": [{"name", "target": [from, to]}]) next to the built-in ones."""
+    for k in [k for k in CALL_TYPES if k.startswith("my_") and k not in BUILT_IN_TYPES]:
+        del CALL_TYPES[k]
+    for t in settings.get("my_types") or []:
+        name = str(t.get("name") or "").strip()[:40]
+        try:
+            lo, hi = sorted(int(x) for x in t.get("target") or [])[:2]
+        except (TypeError, ValueError):
+            continue
+        if name:
+            key = "my_" + (re.sub(r"[^a-z0-9]+", "_", name.lower()).strip("_") or "type")
+            CALL_TYPES[key] = {"da": name, "en": name, "target": (max(0, lo), min(100, hi)), "stretch": 120,
+                               "sales": bool(t.get("sales"))}
 
 T = {
     "da": {"untitled": "Uplanlagt opkald", "loading": "Henter...", "me": "Dig", "them": "Dem",
@@ -112,6 +151,8 @@ T = {
                    "set by you": "valgt af dig", "add-on": "tilføjelse"},
            "stretch_team": "{t} i træk: til pointen, eller tilbage til dagsordenen",
            "stretch": "{t} i træk: stop og stil et spørgsmål", "share5": "Dig: {p}% de sidste 5 min. Spørg, og vær så stille",
+           "share5_low": "Dig: {p}% de sidste 5 min. Tag styringen: opsummér, og før mødet videre",
+           "pause": "Efter dit spørgsmål: vent 3-5 sekunder, og lad dem svare",
            "over": "Over tid +{t}: rund af nu", "left_book": "{t} tilbage: book næste skridt nu", "left": "{t} tilbage: rund af",
            "open_items": "{n} punkter åbne, {t} tilbage: prioritér",
            "auto_open": {"all": "Ved hvert opkald", "calendar": "Kun kalendermøder", "never": "Aldrig, jeg åbner selv"},
@@ -138,6 +179,8 @@ T = {
                    "set by you": "set by you", "add-on": "add-on"},
            "stretch_team": "{t} in a row: get to the point, or back to the agenda",
            "stretch": "{t} in a row: stop and ask a question", "share5": "You: {p}% the last 5 min. Ask, then stay quiet",
+           "share5_low": "You: {p}% the last 5 min. Take the lead: sum up and move the meeting on",
+           "pause": "After your question: wait 3-5 seconds and let them answer",
            "over": "Over time +{t}: wrap up now", "left_book": "{t} left: book the next step now", "left": "{t} left: wrap up",
            "open_items": "{n} items open, {t} left: prioritise",
            "auto_open": {"all": "On every call", "calendar": "Calendar meetings only", "never": "Never, I open it myself"},
@@ -182,7 +225,8 @@ def stamp(seconds: float) -> str:
 
 DEFAULTS = {"name": "", "company": "", "about": "", "language": "da", "enabled": True, "auto_open": "all",
             "auto_join": True, "ai": "auto", "team_domains": [], "words": [], "addons": [], "targets": {},
-            "keep_audio_days": 7, "keep_notes_days": 365, "notice": True, "notice_auto": True, "notice_text": ""}
+            "keep_audio_days": 7, "keep_notes_days": 365, "notice": True, "notice_auto": True, "notice_text": "",
+            "my_types": [], "focus": [], "focus_text": ""}
 
 
 def load_settings() -> dict:
@@ -227,13 +271,21 @@ def save_settings(changes: dict) -> dict:
         s["notice"] = bool(changes["notice"])
     if "notice_auto" in changes:
         s["notice_auto"] = bool(changes["notice_auto"])
+    if isinstance(changes.get("my_types"), list):
+        s["my_types"] = [{"name": str(t.get("name") or "")[:40], "target": list(t.get("target") or [])[:2],
+                          "sales": bool(t.get("sales"))} for t in changes["my_types"][:20] if isinstance(t, dict)]
+    if isinstance(changes.get("focus"), list):
+        s["focus"] = [str(f).strip()[:120] for f in changes["focus"][:10] if str(f).strip()]
+    if "focus_text" in changes:
+        s["focus_text"] = str(changes["focus_text"] or "").strip()[:800]
     if "notice_text" in changes:
         s["notice_text"] = str(changes["notice_text"] or "").strip()[:600]
     if changes.get("api_key"):   # never in the settings file: into the Keychain
         ai.save_api_key(str(changes["api_key"]).strip())
     DATA.mkdir(parents=True, exist_ok=True)
     SETTINGS_FILE.write_text(json.dumps(s, ensure_ascii=False, indent=1))
-    log(f"settings: { {k: v for k, v in s.items() if k != 'about'} }")
+    apply_my_types(s)
+    log(f"settings: { {k: v for k, v in s.items() if k not in ('about', 'focus_text')} }")
     return s
 
 
@@ -516,7 +568,14 @@ def feedback_block(limit: int = 8) -> str:
 
 def extra_rules(kind: str) -> str:
     notes = addons.prompt_notes(kind)
-    return f"\n\nMORE RULES FROM THEIR SETUP:\n{notes}" if notes else ""
+    out = f"\n\nMORE RULES FROM THEIR SETUP:\n{notes}" if notes else ""
+    s = load_settings()
+    focus = [f"- {f}" for f in s.get("focus") or []] + ([f"- In their own words: {s['focus_text']}"] if s.get("focus_text") else [])
+    if focus and kind in ("plan", "cues", "growth"):
+        out += ("\n\nWHAT THEY WANT TO GET BETTER AT AND WANT YOU TO KEEP TRACK OF (their own setting, in their words):\n"
+                + "\n".join(focus) + "\nWhen a moment fits one of these, prefer the cue that helps with it; in the result after the "
+                "call and in your read of their weeks, say how it went on these, with an example from the call.")
+    return out
 
 
 def playbook(call_type: str) -> list[dict]:
@@ -567,13 +626,14 @@ def tidy_debrief(debrief: dict, plan_items: list[dict], std: list[dict]) -> dict
     return debrief
 
 
-def summarize(lines: list[str], title: str, others: list[str], words: list[str]) -> str | None:
+def summarize(lines: list[str], title: str, others: list[str], words: list[str], my_notes: str = "") -> str | None:
     if len(lines) < 8:
         return None
     try:
         system = _fill(P.SUMMARY_SYSTEM, who=", ".join(others) or "the other side",
                        terms=", ".join([load_settings().get("name") or ""] + others + words) or "none")
-        out = ask_json(system, f"Calendar title: {title}\n\nTRANSCRIPT:\n" + "\n".join(lines), P.SUMMARY_SCHEMA)
+        mine = f"\n\nTHEIR OWN NOTES DURING THE CALL (use them, they know what matters):\n{my_notes.strip()}" if my_notes.strip() else ""
+        out = ask_json(system, f"Calendar title: {title}{mine}\n\nTRANSCRIPT:\n" + "\n".join(lines), P.SUMMARY_SCHEMA)
         return out.get("markdown") or None
     except Exception as e:  # noqa: BLE001  (the transcript matters, the summary is a bonus)
         log(f"summary failed: {e}")
@@ -928,6 +988,8 @@ class Session:
         self.finished = False
         self.notice: dict | None = None   # how they were told you record: {"how": "said"|"chat"|"chat_auto", "at": s}
         self.notice_fail = ""             # why the app could not write it in the meeting chat itself
+        self.my_notes = ""                # "Tag noter her": your own notes during the call
+        self._pauses: dict[float, dict] = {}   # your question's start -> the pause after it (settled ones)
         self.forgotten = False            # "Stop og slet": nothing of this call is kept
         self.transcriber = Transcriber(self) if whisper and feed is None else None
         self.consolidator = Consolidator(self) if self.transcriber else None
@@ -966,6 +1028,43 @@ class Session:
                     note["by"] = "you"
                 else:
                     note.pop("by", None)
+
+    def pauses(self) -> list[dict]:
+        """After each of your questions (your line ending in "?"): how long until someone spoke, and who. The
+        transcript line finds the spot, the talk meter's 100 ms frames measure it: the end of your question is the
+        first half second without your voice from just before the line's end; the pause runs to the next voice."""
+        with self.lock:
+            qs = [l for l in self.lines if l["who"] == "me" and l["text"].rstrip().endswith("?")]
+        me, them = self.meter.me, self.meter.them
+        n = min(len(me), len(them))
+        keep = {}
+        for l in qs:
+            if l["t"] in self._pauses:
+                keep[l["t"]] = self._pauses[l["t"]]
+                continue
+            k, quiet = max(0, int((l.get("end") or l["t"]) * 10) - 5), 0
+            while k < n and quiet < 5:
+                quiet = quiet + 1 if not me[k] else 0
+                k += 1
+            if quiet < 5:
+                continue   # still asking
+            q = j = k - 5
+            while j + 1 < n and not ((me[j] or them[j]) and (me[j + 1] or them[j + 1])):
+                j += 1
+            if j + 1 >= n:
+                continue   # nobody has said anything yet
+            keep[l["t"]] = {"at": round(q / 10, 1), "pause": round((j - q) / 10, 1),
+                            "who": "them" if them[j] and not me[j] else "me", "q": l["text"][-90:]}
+        self._pauses = keep
+        return [keep[t] for t in sorted(keep)]
+
+    @staticmethod
+    def pause_stats(ps: list[dict]) -> dict | None:
+        if not ps:
+            return None
+        waits = [p["pause"] for p in ps if p["who"] == "them"]
+        return {"questions": len(ps), "answered": len(waits), "talked_on": len(ps) - len(waits),
+                "median": round(float(np.median(waits)), 1) if waits else None}
 
     def whisper_prompt(self) -> str:
         words = (load_settings().get("words") or []) + (self.ctx.get("words") or [])
@@ -1307,6 +1406,14 @@ class Session:
                 cues.append({"kind": "talk", "text": t["stretch_team" if ctx["type"] == "internal" else "stretch"].format(t=mmss(stretch))})
             elif tgt and share5 is not None and sum(self.meter.seconds(3000)) >= 90 and share5 > tgt[1] + 10:
                 cues.append({"kind": "talk", "text": t["share5"].format(p=share5)})
+            elif tgt and share5 is not None and sum(self.meter.seconds(3000)) >= 90 and share5 < tgt[0] - 15:
+                cues.append({"kind": "talk", "text": t["share5_low"].format(p=share5)})
+            ps = self.pauses()
+            last3 = ps[-3:]
+            # you answered your own question twice in the last three, the latest within the last minute
+            if len(last3) >= 2 and sum(p["who"] == "me" for p in last3) >= 2 and last3[-1]["who"] == "me" \
+                    and self.elapsed() - last3[-1]["at"] <= 60:
+                cues.append({"kind": "talk", "text": t["pause"]})
             open_items = [it for it in (self.plan or {}).get("items", []) if self.status.get(it["id"]) != "covered"]
             cd = self._countdown()
             if cd and cd.get("total_s"):   # the calendar's clock, not the minutes since you joined
@@ -1348,7 +1455,7 @@ class Session:
                 "lag": round(float(np.median(self.delays)), 1) if self.delays else None,
                 "speaking": [w for w, tr_ in (("me", self.mic), ("them", self.sys)) if tr_.utt_start is not None],
                 "ai": self.ai_state, "prep_sources": ctx.get("prep_sources") or [], "notes": self.notes,
-                "replay": bool(self.replay),
+                "replay": bool(self.replay), "pause": self.pause_stats(ps), "my_notes": self.my_notes,
                 "notice": None if self.notice or not load_settings().get("notice", True) or self.replay
                           else {"text": notice_text(self.how != "off"), "chat": not self.phone,
                                 "auto": not self.phone and load_settings().get("notice_auto", True), "fail": self.notice_fail},
@@ -1389,6 +1496,7 @@ class Session:
             "plan": self.plan, "agenda": self.ctx.get("agenda") or [], "who": self.ctx.get("who"),
             "planned_min": self.ctx.get("planned_min"), "emails": self.ctx.get("emails") or [],
             "attendees": self.ctx.get("attendees") or [], "version": VERSION, "notice": self.notice,
+            "pause": snap.get("pause"), "pauses": self.pauses(), "my_notes": self.my_notes,
         }
         if not self.replay and alive:
             try:
@@ -1427,6 +1535,11 @@ class Session:
                      if snap["share"] is not None else "Talk share was not measured on this call (no audio); judge it "
                      "from the transcript only. ")
             stats += f"Checklist at the end: {items}. Cues shown during the call: {cues}."
+            pst = snap.get("pause")
+            if pst:
+                stats += (f" After {self.me}'s {pst['questions']} questions they let the other side answer {pst['answered']} times"
+                          + (f" (median wait {pst['median']} s before the answer)" if pst["median"] is not None else "")
+                          + f" and talked on themselves {pst['talked_on']} times.")
             new = self._unsent()
             lines = "\n".join(f"[{mmss(l['t'])}] {self._name(l['who'])}: {l['text']}" for l in new)
             std = self.ctx.get("std") or []
@@ -1506,7 +1619,7 @@ class Session:
                 f"- Speaker labels: {labels}", "",
             ]
             words = (load_settings().get("words") or []) + (ctx.get("words") or [])
-            notes = summarize(text_lines, ctx["title"], others, words) if self.use_llm else None
+            notes = summarize(text_lines, ctx["title"], others, words, self.my_notes) if self.use_llm else None
             body = ([notes.strip(), "", "## Transcript", ""] if notes else ["## Transcript", ""]) + text_lines
             (self.folder / "transcript.md").write_text("\n".join(header + body) + "\n")
             (self.folder / "turns.json").write_text(json.dumps(
@@ -1647,6 +1760,7 @@ class App:
         out["ai_backend"] = how_ai()
         out["version"] = VERSION
         out["forgotten"] = time.time() - self.forgotten_at < 30
+        out.setdefault("types", {k: type_label(k) for k in CALL_TYPES})   # names for the call list, also between calls
         return out
 
 
@@ -1678,6 +1792,9 @@ def make_handler(app: App):
                 self._json(growth())
             elif path == "/calls":
                 self._json(calls_list())
+            elif path == "/bundle":   # one call as text, for a Claude chat
+                text = bundle_text((q.get("id") or [""])[0])
+                self._send(200 if text else 404, (text or "not found").encode(), "text/plain; charset=utf-8")
             elif path == "/call":
                 c = call_detail((q.get("id") or [""])[0])
                 self._json(c or {}, 200 if c else 404)
@@ -1737,6 +1854,25 @@ def make_handler(app: App):
                     self._json({"added": app.session.add_agenda(points)})
                 else:
                     self._json({"error": "no call and no meeting"}, 400)
+            elif self.path.startswith("/mynotes"):   # "Tag noter her": during the call, or on a call's page after it
+                text = str(body.get("text") or "")[:20000]
+                s_ = app.session
+                d = _call_dir(str(body.get("call") or "")) if body.get("call") else None
+                if s_ and str(body.get("call") or s_.folder.name) == s_.folder.name:   # the call going on
+                    s_.my_notes = text
+                    self._json({"saved": True})
+                elif d:
+                    try:
+                        c = json.loads((d / "copilot.json").read_text())
+                        c["my_notes"] = text
+                        (d / "copilot.json").write_text(json.dumps(c, ensure_ascii=False, indent=1, default=str))
+                        if app.last and app.last.get("folder") == d.name:
+                            app.last["my_notes"] = text
+                        self._json({"saved": True})
+                    except (OSError, ValueError):
+                        self._json({"error": "no such call"}, 400)
+                else:
+                    self._json({"error": "no call"}, 400)
             elif self.path.startswith("/item"):   # you ticked a point yourself
                 if app.session:
                     app.session.set_item(str(body.get("id") or ""), bool(body.get("done")))
@@ -1954,7 +2090,49 @@ def _call_record(folder: Path) -> dict | None:
     return {"id": folder.name, "started": started, "type": kind, "title": (c or meta).get("title") or ev.get("title") or "",
             "share": st.get("share"), "target": target(kind), "stretch": ct["stretch"], "my_longest_s": st.get("my_longest_s"),
             "their_longest_s": st.get("their_longest_s"), "over_s": over, "coached": bool(c),
-            "debrief": (c or {}).get("debrief") or {}, "feedback": (c or {}).get("feedback")}
+            "debrief": (c or {}).get("debrief") or {}, "feedback": (c or {}).get("feedback"), "pause": (c or {}).get("pause")}
+
+
+def _pause_week(rs: list[dict]) -> dict:
+    """The week's pause after your questions: how often you let them answer, and the median wait before they did."""
+    ps = [r["pause"] for r in rs if r.get("pause")]
+    q = sum(p["questions"] for p in ps)
+    meds = [p["median"] for p in ps if p.get("median") is not None]
+    return {"questions": q, "answered_pct": round(100 * sum(p["answered"] for p in ps) / q) if q else None,
+            "pause_median": round(float(np.median(meds)), 1) if meds else None}
+
+
+def bundle_text(cid: str) -> str | None:
+    """One call as text, to paste in a Claude chat or anywhere: your agenda and notes, the coach's result and
+    notes, the transcript. Headings in Danish, like everything you read."""
+    c = call_detail(cid)
+    d = _call_dir(cid)
+    if not c or not d:
+        return None
+    parts = [f"# {c.get('title') or 'Møde'}", f"Tidspunkt: {(c.get('started') or '')[:16].replace('T', ' ')}"]
+    status = {i.get("label"): i.get("status") for i in c.get("items") or []}
+    mine = [it["label"] for it in ((c.get("plan") or {}).get("items") or []) if it.get("kind") == "agenda"]
+    if mine:
+        parts.append("## Min dagsorden\n" + "\n".join(f"- [{'x' if status.get(m) == 'covered' else ' '}] {m}" for m in mine))
+    if (c.get("my_notes") or "").strip():
+        parts.append("## Mine noter\n" + c["my_notes"].strip())
+    db = c.get("debrief") or {}
+    if db.get("verdict"):
+        res = [db["verdict"]]
+        res += [f"- Næste skridt: {x}" for x in db.get("next_steps") or []]
+        res += [f"- Spørg næste gang: {x}" for x in db.get("ask_next") or [] if isinstance(x, str)]
+        if db.get("practise"):
+            res.append(f"- Øv: {db['practise']}")
+        parts.append("## Coachens vurdering\n" + "\n".join(res))
+    if c.get("notes"):   # the notes carry their own headings
+        parts.append(c["notes"].strip() if c["notes"].lstrip().startswith("#") else "## Noter\n" + c["notes"].strip())
+    try:
+        tx = (d / "transcript.md").read_text(errors="ignore").split("## Transcript", 1)
+        if len(tx) == 2 and tx[1].strip():
+            parts.append("## Transskription\n" + tx[1].strip())
+    except OSError:
+        pass
+    return "\n\n".join(parts) + "\n"
 
 
 def _goal_hit(goal: str, r: dict) -> bool | None:
@@ -2044,13 +2222,14 @@ def growth() -> dict:
         sales = [r["share"] for r in rs if r["type"] in sales_kinds()]
         weeks.append({"week": n, "calls": len(rs), "share_sales": round(sum(sales) / len(sales)) if sales else None,
                       **{k: rate(k, rs)["pct"] for k in GOAL_TARGETS},
-                      "my_longest": round(sum(r["my_longest_s"] or 0 for r in rs) / len(rs)) if rs else None})
+                      "my_longest": round(sum(r["my_longest_s"] or 0 for r in rs) / len(rs)) if rs else None,
+                      **_pause_week(rs)})
     try:
         cached = json.loads(GROWTH_FILE.read_text())
     except (OSError, ValueError):
         cached = {}
     threading.Thread(target=_growth_refresh, args=(recs, weeks), daemon=True).start()
-    return {"week": names[-1], "weeks": weeks, "goals": goal_rows, "calls": len(recs),
+    return {"week": names[-1], "weeks": weeks, "goals": goal_rows, "calls": len(recs), "pause": _pause_week(this_week),
             "coach": cached.get("out"), "coach_calls": cached.get("calls"), "coach_at": cached.get("at")}
 
 
@@ -2211,6 +2390,7 @@ def boot() -> None:
         log(f"add-ons: {', '.join(loaded)}")
     for k, v in addons.call_types().items():
         CALL_TYPES[k] = {**CALL_TYPES.get(k, CALL_TYPES["other"]), **v}
+    apply_my_types(load_settings())
 
 
 def cmd_serve(args) -> None:

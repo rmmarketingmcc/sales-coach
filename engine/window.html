@@ -186,6 +186,18 @@
   .cc .agin textarea { font: 13px/1.4 var(--font); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; resize: vertical; }
   .cc .agin button { justify-self: start; font: 600 12px var(--font); border-radius: 6px; padding: 5px 12px; cursor: pointer; background: var(--brand); color: var(--ink); border: 0; }
   .cc .notice .nfail { font-size: 12px; color: var(--crit); }
+  .cc .pz { margin-top: 6px; }
+  .cc #mynotes, .cc #focustext { width: 100%; font: 13px/1.45 var(--font); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; resize: vertical; }
+  .cc .nb { display: flex; gap: 6px; margin-top: 6px; }
+  .cc .nb button, .cc .focus button, .cc .mtypes button { font: 600 12px var(--font); border-radius: 6px; padding: 5px 10px; cursor: pointer; background: var(--brand); color: var(--ink); border: 0; }
+  .cc .focus, .cc .mtypes { width: 100%; }
+  .cc .focus summary, .cc .mtypes summary { cursor: pointer; font-weight: 600; color: var(--ink); }
+  .cc .chips2 { display: grid; gap: 4px; margin: 6px 0; }
+  .cc .chips2 label { display: flex; gap: 6px; align-items: center; color: var(--ink); }
+  .cc .mtypes .mt { display: flex; gap: 8px; align-items: center; margin: 4px 0; color: var(--ink); }
+  .cc .mtypes .mt button { background: transparent; color: var(--crit); border: 1px solid currentColor; }
+  .cc .mtypes input { font: 13px var(--font); border: 1px solid var(--line); border-radius: 6px; padding: 4px 6px; }
+  .cc .mtypes input[type=number] { width: 54px; }
   #toast { position: fixed; left: 8px; right: 8px; bottom: 8px; z-index: 9; padding: 8px 10px; border-radius: 8px; background: var(--ink); color: #fff;
     font: 600 13px var(--font); opacity: 0; transition: opacity .2s; pointer-events: none; }
   #toast.show { opacity: 1; }
@@ -524,8 +536,10 @@ function readyChips(items) {
 }
 // The day's calls ("every morning: you have these calls today, discovery, client
 // meeting...; the planned things ready in the background, and what I still have to do myself").
-const TYPE_DA = {discovery: "Første møde", walkthrough: "Gennemgang", internal: "Team", pa_walkthrough: "Gennemgang af PA", audit_walkthrough: "Gennemgang af audit",
-  close: "Lukkemøde", reconnect: "Genoptag", partner: "Partner", review: "Kundemøde", kickoff: "Opstart", other: "Andet"};
+const TYPE_DA = {discovery: "Første møde", reconnect: "Genoptag", walkthrough: "Gennemgang", close: "Lukkemøde", partner: "Partner",
+  negotiation: "Forhandling", interview: "Jobsamtale", one_on_one: "1:1-samtale", coaching: "Sparring", support: "Kundeservice",
+  presentation: "Oplæg", review: "Kundemøde", internal: "Team", other: "Andet"};
+const typeName = (k) => ((lastState && lastState.types) || {})[k] || TYPE_DA[k] || "Andet";   // your own types too
 const dkDay = (t) => new Date(t).toLocaleDateString("sv-SE");
 const clock = (t, tz) => new Date(t).toLocaleTimeString("en-GB", {timeZone: tz, hour: "2-digit", minute: "2-digit"});
 const callTime = (c) => `${clock(c.start)}`;
@@ -550,7 +564,7 @@ function dayPlan(list) {
     const rows = calls.filter((c) => dkDay(c.start) === day);
     return rows.length ? `<section><h2>${label}</h2><ul class="up calls">${rows.map((c) =>
       `<li data-brief="${esc(c.event_id)}" tabindex="0" role="button"><div class="lbl">${esc(callTime(c))} · ${esc(c.title)}</div>
-       <div class="ctype">${esc(TYPE_DA[c.type] || "Andet")}${(lastState && (lastState.briefs || {})[c.event_id]) ? " · overblik klar" : ""}</div>
+       <div class="ctype">${esc(typeName(c.type))}${(lastState && (lastState.briefs || {})[c.event_id]) ? " · overblik klar" : ""}</div>
        <div class="rds">${readyChips(c.items)}</div></li>`).join("")}</ul></section>` : "";
   };
   return (todo.length ? `<section class="todo-box"><h2>Du skal selv</h2><ul class="bl">${todo.map((t) => `<li>${esc(t)}</li>`).join("")}</ul></section>` : "")
@@ -564,7 +578,7 @@ function dayPlanMini(list) {
   if (!calls.length && !todo.length) return "";
   return `<div class="m-brief">${todo.map((t) => `<div><b>! ${esc(t)}</b></div>`).join("")}
     ${calls.length ? `<div class="bh">I dag</div>` : ""}${calls.map((c) =>
-      `<div>${esc(clock(c.start))} · ${esc(c.name || c.title)} <span class="ctype">${esc(TYPE_DA[c.type] || "")}</span></div>`).join("")}</div>`;
+      `<div>${esc(clock(c.start))} · ${esc(c.name || c.title)} <span class="ctype">${esc(typeName(c.type))}</span></div>`).join("")}</div>`;
 }
 
 function briefHtml(b) {
@@ -627,8 +641,21 @@ function controls(st) {
     <div class="keep"><label for="keepa">Slet lyden</label><select id="keepa">${keepOpts([[0, "lige efter opkaldet"], [7, "efter 7 dage"], [30, "efter 30 dage"]], s.keep_audio_days ?? 7)}</select>
       <label for="keepn">Slet noter og udskrift</label><select id="keepn">${keepOpts([[30, "efter 30 dage"], [90, "efter 90 dage"], [365, "efter 1 år"], ["never", "aldrig"]], s.keep_notes_days ?? "never")}</select>
       <label class="jn"><input type="checkbox" id="notice" ${s.notice !== false ? "checked" : ""}> Fortæl dem, at jeg optager</label>
-      ${s.notice !== false ? `<label class="jn"><input type="checkbox" id="noticeauto" ${s.notice_auto !== false ? "checked" : ""}> Skriv det selv i Meet-chatten</label>` : ""}</div></section>`;
+      ${s.notice !== false ? `<label class="jn"><input type="checkbox" id="noticeauto" ${s.notice_auto !== false ? "checked" : ""}> Skriv det selv i Meet-chatten</label>` : ""}</div>
+    <details class="focus" id="focusbox" ${focusOpen ? "open" : ""}><summary>Det vil jeg blive bedre til</summary>
+      <div class="chips2">${FOCUS.map((f) => `<label><input type="checkbox" data-focus="${esc(f)}" ${(s.focus || []).includes(f) ? "checked" : ""}> ${esc(f)}</label>`).join("")}</div>
+      <textarea id="focustext" rows="2" placeholder="Eller skriv selv til din coach, fx: Mind mig om at spørge til budgettet på hvert første møde.">${esc(s.focus_text || "")}</textarea>
+      <div class="nb"><button type="button" id="focussave">Gem</button></div>
+      <div class="sub">Coachen holder øje med det under møderne, i vurderingen bagefter og på Bliv bedre.</div></details>
+    <details class="mtypes" id="typesbox" ${typesOpen ? "open" : ""}><summary>Egne mødetyper</summary>
+      ${(s.my_types || []).map((t, i) => `<div class="mt">${esc(t.name)} · mål ${t.target[0]}-${t.target[1]}% dig <button type="button" data-deltype="${i}">Fjern</button></div>`).join("")}
+      <div class="mt"><input id="mtname" placeholder="Navn, fx Bestyrelsesmøde" style="flex:1"><input id="mtlo" type="number" min="0" max="100" value="30">-<input id="mthi" type="number" min="0" max="100" value="50">% dig
+        <button type="button" id="mtadd" style="background:var(--brand);color:var(--ink);border:0">Tilføj</button></div>
+      <div class="sub">Målet er din andel af taletiden på den slags møder. Vælg typen i vinduet under mødet.</div></details></section>`;
 }
+const FOCUS = ["Stille flere åbne spørgsmål", "Vente på svaret efter mine spørgsmål", "Lade dem tale færdig",
+  "Få aftalt næste skridt med en dato", "Tale om pris og budget i tide", "Holde tiden", "Opsummere, før vi slutter"];
+let focusOpen = false, typesOpen = false;
 function keepOpts(list, cur) {
   return list.map(([v, l]) => `<option value="${v}" ${String(v) === String(cur) ? "selected" : ""}>${l}</option>`).join("");
 }
@@ -646,10 +673,33 @@ function wireControls(st) {
   if (notice) notice.onchange = (e) => post({notice: e.target.checked});
   const noticeAuto = $("#noticeauto");
   if (noticeAuto) noticeAuto.onchange = (e) => post({notice_auto: e.target.checked});
+  const fb = $("#focusbox"), tb = $("#typesbox");
+  if (fb) fb.ontoggle = (e) => { focusOpen = e.target.open; };
+  if (tb) tb.ontoggle = (e) => { typesOpen = e.target.open; };
+  document.querySelectorAll("[data-focus]").forEach((c) => c.onchange = () =>
+    post({focus: [...document.querySelectorAll("[data-focus]:checked")].map((x) => x.dataset.focus)}));
+  const fs = $("#focussave");
+  if (fs) fs.onclick = () => { post({focus_text: $("#focustext").value}); $("#focustext").blur(); toast("Gemt: coachen holder øje med det"); };
+  const mine = s.my_types || [];
+  const add = $("#mtadd");
+  if (add) add.onclick = () => {
+    const name = $("#mtname").value.trim(), lo = Number($("#mtlo").value), hi = Number($("#mthi").value);
+    if (!name) return;
+    post({my_types: [...mine, {name, target: [Math.min(lo, hi), Math.max(lo, hi)]}]});
+    $("#mtname").value = ""; $("#mtname").blur();
+  };
+  document.querySelectorAll("[data-deltype]").forEach((b) => b.onclick = () =>
+    post({my_types: mine.filter((_, i) => i !== Number(b.dataset.deltype))}));
   wireNotice();
 }
 
 // ---- telling the other side you record, and "Stop og slet" (GDPR)
+const sek = (x) => String(x).replace(".", ",");
+function pauseLine(pz, p) {
+  if (!pz) return "";
+  return `<div class="sub pz"${p ? ` data-p="${p}"` : ""}>Pause efter dine spørgsmål: ${pz.answered} af ${pz.questions} fik lov at svare${
+    pz.median != null ? `, typisk efter ${sek(pz.median)} sek.` : ""}</div>`;
+}
 function noticeHtml(st, p, short) {   // short: the small window, the text is in the copy
   const n = st.notice;
   if (!n) return "";
@@ -713,7 +763,7 @@ function idle(st) {
     : l.notes_status ? `<section><h2>Hurtige noter</h2><div class="empty">${esc(l.notes_status)}</div></section>` : "";
   return `${coming}<section><div class="sub">Venter på et opkald. Sidste: ${esc(l.title)}</div>
     <div class="share" style="margin-top:6px"><span class="big ${shareClass(l.share, l.target)}" style="font-size:30px">${l.share ?? "?"}%</span>
-    <span class="sub">du talte${l.target ? ` (mål ${l.target[0]}-${l.target[1]}%)` : ""}<br>længst: dig ${mmss(l.my_longest_s)}, dem ${mmss(l.their_longest_s)}${l.items && l.items.length ? ` · ${covered}/${l.items.length} på tjeklisten` : ""}</span></div></section>${debriefHtml(l)}${feedbackBox(l)}${notes}${linksBar(l.links)}`;
+    <span class="sub">du talte${l.target ? ` (mål ${l.target[0]}-${l.target[1]}%)` : ""}<br>længst: dig ${mmss(l.my_longest_s)}, dem ${mmss(l.their_longest_s)}${l.items && l.items.length ? ` · ${covered}/${l.items.length} på tjeklisten` : ""}</span></div>${pauseLine(l.pause)}</section>${debriefHtml(l)}${feedbackBox(l)}${l.folder ? notesHtml(l.my_notes, l.folder) : ""}${notes}${linksBar(l.links)}`;
 }
 
 // The Call Copilot widget (tools/callrec/widget.swift) loads ?widget=1: compact while the window is
@@ -776,6 +826,7 @@ function renderMini(st) {
     ${cues.map((c, i) => cueHtml(c, i ? 5 : 2)).join("")
       || (st.brief && st.elapsed < 240 ? `<div class="m-brief" data-p="6"><b>${esc(st.brief.who || st.title)}</b>${st.brief.goal ? `<br>Mål: ${esc(st.brief.goal)}` : ""}</div>` : "")}
     ${nextAsk(st)}
+    ${pauseLine(st.pause, 7.5)}
     ${st.items.length ? `<div class="m-items" data-p="8">${dots}<span class="sub">${itemCount(st.items)}</span></div>` : ""}
     ${lastLine(st)}
     ${linksBar(liveLinks(st), 6)}
@@ -878,7 +929,16 @@ function growthHtml() {
       <div class="sub" style="margin-top:6px">Coachens læsning af dine sidste ${g.coach_calls || ""} opkald med coachen${at ? `, ${at}` : ""}</div>`;
   return `<section><h2>Ugens 3 mål, uge ${weekNo(g.week)}</h2>${g.goals.map(goalRow).join("")}
       <div class="sub" style="margin-top:6px">Til tiden måles fra, da den anden part sidst talte, mod kalenderens sluttid.</div></section>
+    ${pauseWeek(g)}
     <section><h2>Sådan står du</h2>${read}</section>`;
+}
+function pauseWeek(g) {
+  const pz = g.pause || {}, weeks = (g.weeks || []).filter((w) => w.answered_pct != null);
+  return `<section><h2>Pause efter dine spørgsmål</h2>${pz.questions
+    ? `<div class="lbl">${pz.answered_pct}% af dine spørgsmål fik lov at blive besvaret${pz.pause_median != null ? `, typisk efter ${sek(pz.pause_median)} sek.` : ""}</div>`
+    : `<div class="empty">Ingen spørgsmål målt i denne uge endnu.</div>`}
+    ${weeks.length > 1 ? `<div class="sub">${weeks.map((w) => `uge ${weekNo(w.week)}: ${w.answered_pct}%`).join(" · ")}</div>` : ""}
+    <div class="sub">Vent 3-5 sekunder efter dit spørgsmål. Fylder du selv pausen, når de ikke at svare.</div></section>`;
 }
 async function loadCall(id) {
   if (window.COPILOT_PREVIEW) return;
@@ -962,6 +1022,7 @@ function callHtml() {
         <span class="sub">du talte${t ? ` (mål ${t[0]}-${t[1]}%)` : ""}<br>længst: dig ${mmss(c.my_longest_s)}, dem ${mmss(c.their_longest_s)}</span></div></section>
     ${c.coached ? debriefHtml(c) + feedbackBox(c)
       : `<section><div class="empty">Coachen var ikke med på dette opkald, så der er ingen vurdering. Taletiden er fra optagelsen, noterne fra transskriptionen.</div></section>`}
+    ${notesHtml(c.my_notes, c.id)}
     ${c.notes ? `<section class="notes"><h2>Noter</h2>${md(c.notes)}</section>` : ""}
     <section><button type="button" class="delcall" id="delcall" data-call="${esc(c.id)}">Slet opkaldet</button></section>
     ${linksBar([...(c.links || []), ...extra])}`;
@@ -975,6 +1036,7 @@ function renderHistory(st) {
     wireTabs();
     wireFeedback();
     wireNotice();
+    if (view === "call" && detailCache) wireNotes(detailCache.id, detailCache.my_notes);
     markMore();
   }
   fillUpNext(st);   // the countdown ticks on its own, without redrawing the list under it
@@ -986,7 +1048,7 @@ function render(st) {
   if (!st.active && !st.title && view !== "overview") { renderHistory(st); return; }
   historyHtml = "";
   if (compact()) { renderMini(st); return; }
-  if (!st.active && !st.title) { $("#app").innerHTML = tabs() + (st.forgotten ? `<section><div class="gone">Opkaldet er stoppet og slettet. Intet fra det er gemt.</div></section>` : "") + idle(st) + nextAgendaHtml(st) + controls(st); wireTabs(); wireControls(st); wireFeedback(); wireAgenda(st.upcoming && st.upcoming.id); fillUpNext(st); return; }
+  if (!st.active && !st.title) { $("#app").innerHTML = tabs() + (st.forgotten ? `<section><div class="gone">Opkaldet er stoppet og slettet. Intet fra det er gemt.</div></section>` : "") + idle(st) + nextAgendaHtml(st) + controls(st); wireTabs(); wireControls(st); wireFeedback(); wireAgenda(st.upcoming && st.upcoming.id); wireNotes(st.last && st.last.folder, st.last && st.last.my_notes); fillUpNext(st); return; }
   const t = st.target;
   const left = st.planned ? st.planned - st.elapsed : null;
   const clockCls = left == null ? "" : left < 0 ? "crit" : left <= 300 ? "warn" : "";
@@ -1021,11 +1083,13 @@ function render(st) {
       <div class="bar">${t ? `<div class="band" style="left:${t[0]}%;width:${t[1] - t[0]}%"></div>` : ""}
         <div class="fill" style="width:${st.share ?? 0}%"></div>${st.share5 != null ? `<div class="fill5" style="left:${st.share5}%"></div>` : ""}</div>
       ${st.stretch >= 30 && !st.cues.some((c) => c.kind === "talk") ? `<div class="stretch">Dig: ${mmss(st.stretch)} i træk</div>` : ""}
+      ${pauseLine(st.pause)}
     </section>
     ${st.notice ? `<section>${noticeHtml(st, 1)}</section>` : ""}
     <section><h2>Nu</h2><div class="cues">${cues}</div>${nextAsk(st)}</section>
     ${st.brief ? `<section><details id="brief" ${(briefOpen ?? st.elapsed < 300) ? "open" : ""}><summary>Overblik</summary><div class="brief">${briefHtml(st.brief)}</div></details></section>` : ""}
     ${agendaHtml(st.items.filter((i) => i.kind === "agenda"))}
+    ${notesHtml(st.my_notes, st.call_id, false)}
     <section><h2>Tjekliste</h2>${st.goal ? `<div class="say" style="margin-bottom:8px">${esc(st.goal)}</div>` : ""}${items}</section>
     ${agenda ? `<section><h2>Dagsorden</h2>${agenda}</section>` : ""}
     <section><details ${openDetails ? "open" : ""} id="tx"><summary>Live transskription</summary><div class="lines">${lines}</div></details></section>
@@ -1035,6 +1099,7 @@ function render(st) {
       <div style="margin-top:6px"><button type="button" class="forget" data-forget="1">Stop og slet dette opkald</button></div></footer>${controls(st)}${linksBar(liveLinks(st))}`;
   wireControls(st);
   wireAgenda();
+  wireNotes(st.call_id, st.my_notes);
   $("#type").onchange = (e) => {
     if (window.COPILOT_PREVIEW) return;
     fetch("/type", {method: "POST", body: JSON.stringify({type: e.target.value})}).catch(() => {});
@@ -1069,6 +1134,33 @@ function wireAgenda(eventId) {
   document.querySelectorAll("[data-item]").forEach((c) => c.onchange = () =>
     fetch("/item", {method: "POST", body: JSON.stringify({id: c.dataset.item, done: c.checked})}).then(tick).catch(() => {}));
 }
+// ---- "Tag noter her": your own notes, saved with the meeting while you type, in the notes after it
+let notesDraft = null;   // {call, text}: what you typed, until the server has it (the window redraws every second)
+function notesHtml(text, callId, copy = true) {
+  const v = notesDraft && notesDraft.call === callId ? notesDraft.text : (text || "");
+  return `<section><h2>Dine noter</h2><textarea id="mynotes" rows="4" placeholder="Tag noter her. De gemmes med mødet og kommer med i noterne bagefter.">${esc(v)}</textarea>
+    ${copy ? `<div class="nb"><button type="button" id="bundle" data-call="${esc(callId)}">Kopiér alt til en AI-chat</button></div>
+    <div class="sub">Dine noter, din dagsorden, coachens vurdering og noter og hele transskriptionen, klar til at sætte ind i en Claude-chat.</div>` : ""}</section>`;
+}
+function wireNotes(callId, serverText) {
+  if (notesDraft && notesDraft.call === callId && notesDraft.text === (serverText || "")) notesDraft = null;
+  const t = $("#mynotes");
+  if (t && callId) {
+    let h;
+    const save = () => fetch("/mynotes", {method: "POST", body: JSON.stringify({text: t.value, call: callId})})
+      .then(() => { if (view === "call" && detailCache && detailCache.id === callId) detailCache.my_notes = t.value; }).catch(() => {});
+    t.oninput = () => { notesDraft = {call: callId, text: t.value}; clearTimeout(h); h = setTimeout(save, 700); };
+    t.onblur = () => { clearTimeout(h); save(); };
+    t.onfocus = () => { try { window.webkit.messageHandlers.copilot.postMessage("type"); } catch (e) { /* a browser tab */ } };
+  }
+  const b = $("#bundle");
+  if (b) b.onclick = async () => {
+    const text = await (await fetch("/bundle?id=" + encodeURIComponent(b.dataset.call))).text().catch(() => "");
+    await copyText(text);
+    toast("Kopieret. Sæt det ind i en Claude-chat med ⌘V");
+  };
+}
+
 // before the call: the agenda for the next meeting, saved until it starts
 function nextAgendaHtml(st) {
   const u = st.upcoming;
@@ -1085,7 +1177,7 @@ function markMore() {
 async function tick() {
   try {
     // don't redraw under an open menu or while feedback is being typed
-    if (document.activeElement && ["type", "auto", "fbnote", "agendatext", "keepa", "keepn"].includes(document.activeElement.id)) return;
+    if (document.activeElement && ["type", "auto", "fbnote", "agendatext", "keepa", "keepn", "mynotes", "focustext", "mtname", "mtlo", "mthi"].includes(document.activeElement.id)) return;
     render(await (await fetch(document.visibilityState === "hidden" ? "/state?hidden=1" : "/state", {cache: "no-store"})).json());
     markMore();
   } catch (e) {
