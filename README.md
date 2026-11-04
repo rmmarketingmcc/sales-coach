@@ -18,7 +18,19 @@ When you hang up, you get:
 
 It works with Google Meet, Zoom, Teams, Slack, FaceTime and WhatsApp calls, and phone calls on speaker.
 
-**Status: 0.1, in development.** It runs every day on one Mac. It isn't ready to install on yours yet: see [ROADMAP.md](ROADMAP.md).
+**Status: 0.2, early.** It runs every day on our own Macs, and friends are trying it. The plan is in [ROADMAP.md](ROADMAP.md).
+
+## Install
+
+The guide: **https://rmmarketingmcc.github.io/sales-coach/**. In short, in Terminal:
+
+```bash
+curl -fsSL https://rmmarketingmcc.github.io/sales-coach/install.sh | bash
+```
+
+It asks four questions (name, company, what you sell, language), downloads the speech model once (about 6 GB), and
+macOS asks once for the Microphone, the call audio and your Calendar. Run the same line again to update; add
+`-s -- --uninstall` after `bash` to remove it.
 
 Made by [RM Marketing](https://rm-marketing.dk).
 
@@ -39,9 +51,10 @@ Made by [RM Marketing](https://rm-marketing.dk).
 
 | Part | What it does |
 |------|-------------|
-| Recorder | Records your microphone and the call audio to two separate tracks while a call app holds the mic. Stops when the call ends. |
-| `engine/` | The coach: reads both tracks as they grow, transcribes, runs the checklist and cues, serves the window on `http://127.0.0.1:8765`. |
-| Sales Coach app | The small floating window next to your call, a menu bar item, and your Mac Calendar as the source of meetings. |
+| `recorder/` | Sales Coach Recorder: records your microphone and the call audio to two separate tracks while a call app holds the mic. Stops when the call ends. |
+| `engine/` | The coach: reads both tracks as they grow, transcribes, runs the checklist and cues, serves the window on `http://127.0.0.1:8765`, compresses the audio after the call. |
+| `app/` | Sales Coach: the small floating window next to your call, the "Coach" menu bar item, and your Mac Calendar written to `calendar.json` for the coach. The engine ships inside it. |
+| `docs/` | The guide page (GitHub Pages) and `install.sh`. |
 
 The engine's files:
 
@@ -70,3 +83,14 @@ The test call is 70 seconds of the Mac's Danish voice playing both sides of a fi
 ## Add-ons
 
 An add-on is one Python file listed in the settings (`coach.py settings --addons /path/to/addon.py`). It can add context before a call (who they are, where you left off, your own questions), extra call types, rules for the AI, a calendar source, or book the next meeting with invitations. See the top of `engine/addons.py`.
+
+## Build and release
+
+```bash
+./build.sh                 # build/Sales-Coach.zip: both apps, the engine inside Sales Coach.app (Apple Silicon)
+./release.sh 0.2.1         # version, CHANGELOG from the commit subjects, GitHub release; friends update with the install line
+```
+
+Test an install without touching your own setup: `SALES_COACH_ZIP=$PWD/build/Sales-Coach.zip SALES_COACH_NO_SERVICES=1 HOME=/tmp/sc-home bash docs/install.sh`
+(set `HF_HOME=~/.cache/huggingface` to reuse a speech model you already have).
+

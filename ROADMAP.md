@@ -16,25 +16,26 @@ here, and each user's own data through add-ons, so every improvement reaches eve
 
 ## 0.2: installable on another Mac
 
-- [ ] The recorder, renamed and rebranded (bundle ids, folder), in `recorder/`
-- [ ] The Sales Coach app in `app/`: reads the Mac Calendar (EventKit) into `calendar.json`, asks for
-      Calendar, Microphone and Audio Recording access once, with a short explanation of each
-- [ ] A first-run screen in the window: name, company, what you sell, language, AI check
-      ("Claude Code found" / "paste an API key" / "off")
-- [ ] One-line installer like Sunscreen's: prebuilt apps, the Python engine in its own folder (uv),
-      the speech model downloaded with progress, background services set up
-- [ ] After-call job: a better full transcript when the Mac is idle, audio compressed, then deleted after
-      30 days (a setting); calls with nobody on the other side deleted
-- [ ] Release flow like Sunscreen's: `./release.sh`, CHANGELOG, "Update available" in the app, one click to update
-- [ ] Bug reports to GitHub issues from the app, with diagnostics filled in
-- [ ] A check before every release that no client names or private data are in the code
+- [x] The recorder, renamed and rebranded (bundle ids, folder), in `recorder/`
+- [x] The Sales Coach app in `app/`: reads the Mac Calendar (EventKit) into `calendar.json`; the installer has macOS
+      ask once for Calendar, Microphone and the call audio, with a test sound to check the recording works
+- [x] One-line installer like Sunscreen's: prebuilt apps, the coach's own Python (uv) in its own folder, the speech
+      model downloaded with progress, background services set up, `--uninstall`
+- [x] First questions (name, company, what you sell, language, Claude Code found or an API key) in the installer
+- [ ] The same as a first-run screen in the window, and a settings screen to change them later
+- [x] After the call: audio compressed (AAC, about 15 MB an hour), deleted after 30 days (`keep_audio_days`)
+- [ ] After the call: a better full transcript when the Mac is idle; calls with nobody on the other side deleted
+- [x] Release flow like Sunscreen's: `./release.sh`, CHANGELOG from the commit subjects, GitHub release
+- [ ] "Update available" in the app, one click to update (today: run the install line again)
+- [x] Bug reports to GitHub issues from the menu bar, with the technical details filled in (never name, company or calls)
+- [ ] The check for client names and private data wired into `release.sh` (the hook is there: `SALES_COACH_LEAK_CHECK`)
+- [x] The guide page (GitHub Pages) in the RM look, with the install line and real screenshots from a made-up call
 
 ## 0.3: useful from day one for someone new
 
 - [ ] Your own notes per company or person (one file each, matched by mail domain or name), used in the brief
 - [ ] Your own standard questions per call type, shown after sales calls with what is still unanswered
 - [ ] The window in English as well as Danish (it follows the language setting)
-- [ ] A guide page (GitHub Pages) in the RM look, with the install line and screenshots
 - [ ] Practice calls with an AI lead, using the Mac's own voice
 - [ ] A count of how many Macs use it (one anonymous ping a day, no id), like Sunscreen
 
