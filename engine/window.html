@@ -82,7 +82,7 @@
   .cc .next { display: grid; gap: 4px; margin-top: 8px; }
   .cc .next .nx { font-size: 13.5px; font-weight: 600; color: var(--ink); background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 5px 8px; }
   .cc .next .nx.partly { border-color: var(--warn); }
-  /* a partly answered question says so, and names the gap (Rasmus 4 Nov: "answered in part, but it
+  /* a partly answered question says so, and names the gap ("answered in part, but it
      doesn't say so, or what we still need to dig into") */
   .cc .dl { display: inline-block; padding: 0 7px; border-radius: 999px; background: var(--warn-soft); color: var(--warn-ink);
     border: 1px solid var(--warn); font-size: 10.5px; font-weight: 700; line-height: 16px; vertical-align: 1px; margin-right: 4px; white-space: nowrap; }
@@ -96,7 +96,7 @@
   .cc .moments.why li { color: var(--muted); border-left-color: var(--line); }
   .cc .debrief details summary { margin-top: 4px; }
   .cc .std { display: grid; gap: 3px; margin-top: 4px; }
-  /* the question names are one fixed column, always whole (Rasmus 4 Nov: "lock them so they can always be
+  /* the question names are one fixed column, always whole ("lock them so they can always be
      read; the text after them is what changes when I make it wide or small"); "Annoncebudget" is the longest */
   .cc .sq { display: grid; grid-template-columns: 12px 106px minmax(0, 1fr); gap: 6px; align-items: baseline; font-size: 12.5px; }
   .cc .sq .k { color: var(--faint); font-weight: 600; white-space: nowrap; }
@@ -117,6 +117,7 @@
   .cc .book { display: grid; gap: 4px; margin-top: 8px; padding: 8px 10px; border: 1px solid var(--brand); border-radius: 8px; background: var(--brand-soft); }
   .cc .book.done { font-weight: 600; }
   .cc .book .clash { color: var(--crit); font-size: 12px; font-weight: 600; }
+  .cc .book .save { justify-self: start; font: 600 13px var(--font); border-radius: 6px; padding: 6px 14px; cursor: pointer; background: var(--brand); color: var(--ink); border: 0; }
   .cc .lbar { position: sticky; bottom: 0; display: flex; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; gap: 6px; padding: 8px 2px 4px; background: var(--ground); border-top: 1px solid var(--line); margin-top: 4px; }
   .cc .lbar::-webkit-scrollbar { display: none; }
   .cc .lbar .chip { flex: none; }
@@ -208,7 +209,7 @@
   .cc .cpct.ok { color: var(--ok); } .cc .cpct.warn { color: var(--warn); } .cc .cpct.crit { color: var(--crit); }
   .cc .ctitle { font-weight: 600; font-size: 13px; }
   .cc .backb { font: 600 12px var(--font); background: none; border: 0; color: var(--brand-ink); cursor: pointer; padding: 2px 0; justify-self: start; }
-  /* the meeting's countdown: to the calendar end, then the next meeting (Rasmus 4 Nov: "my meetings run over
+  /* the meeting's countdown: to the calendar end, then the next meeting ("my meetings run over
      and the next one starts late; I need a countdown I can see") */
   .cc .cd { display: grid; gap: 5px; padding: 8px 11px; border-radius: 12px; background: var(--card); border: 1px solid #E3E8F0; }
   .cc .cd-row { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
@@ -228,7 +229,7 @@
   .cc .pulse { animation: pulse .9s ease-in-out infinite alternate; }
   @keyframes pulse { from { opacity: 1; } to { opacity: .6; } }
   @media (prefers-reduced-motion: reduce) { .cc .pulse { animation: none; } }
-  /* between calls: the countdown to the next meeting, and when its Meet opens (Rasmus 4 Nov: "a countdown
+  /* between calls: the countdown to the next meeting, and when its Meet opens ("a countdown
      to my next meeting on my screen, and the meeting opened in Meet two minutes before") */
   #upnext:empty { display: none; }
   .cc .up { grid-template-columns: minmax(0, 1fr); }   /* a long title is cut, never widens the window */
@@ -238,7 +239,7 @@
     display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
   .cc .up .cd-lbl { white-space: nowrap; }
   .cc .jn { display: inline-flex; align-items: center; gap: 5px; cursor: pointer; }
-  /* "Bliv bedre": the week's three goals and the coach's read on him (Rasmus 4 Nov) */
+  /* "Bliv bedre": the week's three goals and the coach's read on you */
   .cc .gl { display: grid; gap: 4px; padding: 8px 0 2px; border-top: 1px solid #EDF1F6; }
   .cc .gl:first-of-type { border-top: 0; padding-top: 2px; }
   .cc .gl-h { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 8px; align-items: baseline; font-size: 13px; }
@@ -248,7 +249,7 @@
   .cc .gl-bar > div { height: 100%; border-radius: 4px; background: var(--brand); }
   .cc .gl-bar.bad > div { background: var(--warn); }
   .cc .gl-t { position: absolute; top: -3px; bottom: -3px; width: 2px; border-radius: 1px; background: var(--ink); }
-  /* the charts (Rasmus 4 Nov: "more visual, charts, so I quickly see whether it gets better or worse"): this
+  /* the charts ("more visual, charts, so I quickly see whether it gets better or worse"): this
      week's meetings as dots, the weeks as bars against the target line; green made it, orange did not */
   .cc .gl-dots { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; min-height: 12px; }
   .cc .gl-dots i { width: 12px; height: 12px; border-radius: 50%; background: var(--brand); }
@@ -313,7 +314,7 @@ function md(text) {
 let briefOpen = null, fbRating = null, fbDraft = "";
 
 // The buttons (website, Google Ads, report, CRO review, PA, talepapir, mail) in a bar fixed to the bottom
-// of the window (Rasmus 4 Nov: "buttons down at the bottom of the widget").
+// of the window ("buttons down at the bottom of the widget").
 // on the call you are in the meeting already: no "Deltag i mødet" there
 const liveLinks = (st) => (st.links || []).filter((l) => l.kind !== "meet");
 const minsLeft = (sec) => sec >= 60 ? `${Math.round(sec / 60)} min` : `${Math.max(0, sec)} sek.`;
@@ -359,7 +360,7 @@ function linksBar(ls, p) {
   return (ls || []).length ? `<div class="lbar"${p ? ` data-p="${p}"` : ""}>${links({links: ls})}</div>` : "";
 }
 
-// one plain stroke icon per kind of button, so they are found without reading (Rasmus 4 Nov: "make the
+// one plain stroke icon per kind of button, so they are found without reading ("make the
 // buttons even better")
 const ICONS = {
   meet: '<rect x="2" y="6" width="13" height="12" rx="2"/><path d="M15 10l7-4v12l-7-4"/>',
@@ -396,7 +397,7 @@ function modeTag(st) {
 }
 
 // The next two open questions, as the line to say: fixed until one is answered, so it can be read
-// (Rasmus 2026-11-04: "always show the next 2, so it doesn't vanish while I read it")
+// ("always show the next 2, so it doesn't vanish while I read it")
 function nextAsk(st) {
   const n = (st.next_items || []).slice(0, 2);
   if (!n.length) return "";
@@ -423,13 +424,13 @@ function debriefHtml(l, short) {
   if (l.debrief_status === "writing") return `<section><h2>Resultat</h2><div class="empty">Eksperterne gennemgår opkaldet...</div></section>`;
   const d = l.debrief || {};
   if (!d.verdict) return "";
-  // Rasmus 4 Nov: "way too long; the numbers belong in the standard questions, shown visually; don't
+  // "way too long; the numbers belong in the standard questions, shown visually; don't
   // quote me and then explain it in English". So: a result card. The standard questions as a grid
   // (this call / on file / missing), next steps, what to ask next time, and two coach lines that are
   // only the Danish line to use and whose principle it is.
   const std = l.std || [];
   const got = Object.fromEntries((d.answers || []).map((a) => [a.id, a]));
-  // a missing question shows the line to ask (Rasmus 4 Nov: "not just 'delivery', the question that gets
+  // a missing question shows the line to ask ("not just 'delivery', the question that gets
   // an answer"), and an industry estimate where there is one, marked as an estimate
   const est = Object.fromEntries((d.estimates || []).map((e) => [e.id, e]));
   const rows = std.map((q) => {
@@ -497,14 +498,14 @@ function readyChips(items) {
       : `<span class="rd ${i.status}">${txt}</span>`;
   }).join("") || `<span class="rd ok">✓ Klar</span>`;
 }
-// The day's calls (Rasmus 2026-11-04: "every morning: you have these calls today, discovery, client
+// The day's calls ("every morning: you have these calls today, discovery, client
 // meeting...; the planned things ready in the background, and what I still have to do myself").
 const TYPE_DA = {discovery: "Første møde", walkthrough: "Gennemgang", internal: "Team", pa_walkthrough: "Gennemgang af PA", audit_walkthrough: "Gennemgang af audit",
   close: "Lukkemøde", reconnect: "Genoptag", partner: "Partner", review: "Kundemøde", kickoff: "Opstart", other: "Andet"};
 const dkDay = (t) => new Date(t).toLocaleDateString("sv-SE");
 const clock = (t, tz) => new Date(t).toLocaleTimeString("en-GB", {timeZone: tz, hour: "2-digit", minute: "2-digit"});
 const callTime = (c) => `${clock(c.start)}`;
-// What only Rasmus can do, from the check's gaps; the builders do the rest by themselves
+// What only you can do, from the check's gaps; the builders do the rest by themselves
 function todos(c) {
   const n = c.name || c.title;
   return (c.items || []).filter((i) => i.status === "missing" || i.status === "warn").map((i) => ({
@@ -678,7 +679,7 @@ function renderMini(st) {
   const clockCls = left == null ? "" : left < 0 ? "crit" : left <= 300 ? "warn" : "";
   const open = st.items.filter((i) => i.status !== "covered");
   const dots = st.items.map((i) => `<span class="dot ${i.status}" title="${esc(i.label)}"></span>`).join("");
-  // Rasmus 4 Nov: "a lot breaks as soon as I make it small; keep it responsive all the time". What
+  // "a lot breaks as soon as I make it small; keep it responsive all the time". What
   // fits the height, most important first: talk share, the top cue, the next 2 questions (always 2,
   // his 4 Nov rule, unless the window is tiny), then the second cue, progress, the last line, buttons.
   const cues = st.cues.slice(0, 2);
@@ -727,7 +728,7 @@ const aiDa = (a) => ({"on": "til", "off": "fra", "waiting for the plan": "venter
   || String(a || "").replace(/^off: /, "fra: ").replace(/^retrying: /, "prøver igen: "));
 
 // ---- Between calls: Overblik (the day, the last call) and Opkald (every call, and one call's result).
-// Rasmus 2026-11-04: "go into all the earlier calls and switch between the views: a general overview, and
+// "go into all the earlier calls and switch between the views: a general overview, and
 // one where I go straight into how this specific call went". A live call always shows the live view.
 let view = "overview", callsCache = null, callsAt = 0, detailId = null, detailCache = null, historyHtml = "";
 async function loadCalls(force) {
@@ -736,7 +737,7 @@ async function loadCalls(force) {
   try { callsCache = await (await fetch("/calls", {cache: "no-store"})).json(); } catch (e) { /* next tick */ }
   if (lastState) render(lastState);
 }
-// ---- "Bliv bedre" (Rasmus 2026-11-04: "somewhere I can see how I am, how I get better and what I am missing,
+// ---- "Bliv bedre" ("somewhere I can see how I am, how I get better and what I am missing,
 // and weekly goals, e.g. not going over time or not talking too much"): from every recorded call, practice calls
 // left out; the coach's read is refreshed in the background after new calls (call_copilot.py growth())
 let growthCache = null, growthAt = 0;
@@ -765,7 +766,7 @@ function weekChart(weeks, target, label) {
     <line class="base" x1="0" x2="${W - 34}" y1="${top + ch}" y2="${top + ch}"/>
     <line class="tl" x1="0" x2="${W - 30}" y1="${y(target)}" y2="${y(target)}"/><text class="tlb" x="${W}" y="${y(target) + 3}">mål</text>${bars}</svg>`;
 }
-// Three goals, nothing to set up (Rasmus 4 Nov: "max 3 things, really simple; we must always be on time"): this
+// Three goals, nothing to set up ("max 3 things, really simple; we must always be on time"): this
 // week's calls against the target, and the weeks before as one line
 function growthHtml() {
   const g = window.COPILOT_PREVIEW ? window.COPILOT_PREVIEW.growth : growthCache;
