@@ -50,6 +50,9 @@ ENGINE = Path(__file__).resolve().parent
 ROOT = Path(os.environ.get("SALES_COACH_ROOT") or Path.home() / "CallRecordings")          # the recorder's folder
 DATA = Path(os.environ.get("SALES_COACH_DATA") or Path.home() / "Library" / "Application Support" / "Sales Coach")
 HUD_FILE = ENGINE / "window.html"
+# A phone call on speaker: the recorder records while this file exists (recorder/main.swift); the window's
+# "Start telefonopkald" button and the Sales Coach menu create and delete it
+PHONE_FLAG = ROOT / ".phone_call"
 PORT = int(os.environ.get("SALES_COACH_PORT", "8765"))
 VERSION = (ENGINE.parent / "VERSION").read_text().strip() if (ENGINE.parent / "VERSION").exists() else "dev"
 SETTINGS_FILE = DATA / "settings.json"
@@ -1760,6 +1763,7 @@ class App:
         out["ai_backend"] = how_ai()
         out["version"] = VERSION
         out["forgotten"] = time.time() - self.forgotten_at < 30
+        out["phone_on"] = PHONE_FLAG.exists()
         out.setdefault("types", {k: type_label(k) for k in CALL_TYPES})   # names for the call list, also between calls
         return out
 
@@ -1831,6 +1835,14 @@ def make_handler(app: App):
             elif self.path.startswith("/note"):   # the Sales Coach app's own events, into this log
                 log(f"app: {str(body.get('msg') or '')[:200]}")
                 self._json({})
+            elif self.path.startswith("/phone"):
+                # the phone call on speaker has its own button at the bottom of the window, not only in the menu
+                if body.get("on"):
+                    PHONE_FLAG.touch()
+                else:
+                    PHONE_FLAG.unlink(missing_ok=True)
+                log(f"phone call {'started' if body.get('on') else 'stopped'} from the window")
+                self._send(200, json.dumps({"phone_on": PHONE_FLAG.exists()}).encode(), "application/json")
             elif self.path.startswith("/settings"):
                 self._json(save_settings(body))
             elif urlparse(self.path).path == "/notice":   # they were told: you said it, pasted it, or the app wrote it
