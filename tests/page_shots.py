@@ -85,7 +85,7 @@ def main() -> None:
             after = browser.new_page(viewport={"width": 380, "height": 760}, device_scale_factor=2)
             after.goto(f"{BASE}/?widget=1")
             after.wait_for_timeout(2500)
-            after.screenshot(path=str(IMG / "after.png"), clip={"x": 0, "y": 0, "width": 380, "height": 645})
+            after.screenshot(path=str(IMG / "after.png"))   # the whole window, with the phone button at the bottom
             print("after.png")
             browser.close()
     finally:
