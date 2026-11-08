@@ -1,5 +1,13 @@
 [
  {
+  "version": "0.2.1",
+  "date": "8 Nov 2026",
+  "notes": [
+   "Vinduet åbner kun ved et rigtigt opkald, ikke når du optager en lydbesked",
+   "Start telefonopkald er nu en stor knap nederst i vinduet, som du slår til og fra"
+  ]
+ },
+ {
   "version": "0.2.0",
   "date": "5 Nov 2026",
   "notes": [

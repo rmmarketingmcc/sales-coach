@@ -1,5 +1,10 @@
 # Ændringer
 
+## 0.2.1 (8 Nov 2026)
+
+- Vinduet åbner kun ved et rigtigt opkald, ikke når du optager en lydbesked
+- Start telefonopkald er nu en stor knap nederst i vinduet, som du slår til og fra
+
 ## 0.2.0 (5 Nov 2026)
 
 - Installér den med én linje i Terminal
