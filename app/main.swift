@@ -558,8 +558,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
                             tint = left <= 300 ? .systemOrange : nil
                         }
                     }
-                    // one key per call: its recording, so a call is placed once and then left where you move it
-                    newCall = (st["call_id"] as? String) ?? (st["title"] as? String ?? "")
+                    // one key per call: its recording, so a call is placed once and then left where you move it.
+                    // Only a confirmed call (calendar, phone, or the other side talked 3 s): a voice message holds
+                    // the mic like a call does and must not pop the window
+                    if (st["confirmed"] as? Bool) == true {
+                        newCall = (st["call_id"] as? String) ?? (st["title"] as? String ?? "")
+                    }
                 } else if (settings?["enabled"] as? Bool) == false {
                     title = "Coach fra"
                 } else if let inS = up?["in_s"] as? Int, inS <= 900 {
