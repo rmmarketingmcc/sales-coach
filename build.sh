@@ -34,7 +34,7 @@ cp VERSION "$WORK/Sales Coach.app/Contents/Resources/VERSION"
 
 echo "==> Signing"
 for app in "$WORK/Sales Coach Recorder.app" "$WORK/Sales Coach.app"; do
-  xattr -cr "$app"   # Finder/iCloud metadata breaks codesign
+  /usr/bin/xattr -cr "$app"   # Finder/iCloud metadata breaks codesign; macOS own xattr, a pip "xattr" on PATH has no -r
   codesign --force --sign - "$app" 2>&1 | grep -v "replacing existing" || true
 done
 
