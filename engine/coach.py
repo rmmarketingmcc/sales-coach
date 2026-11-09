@@ -1153,6 +1153,8 @@ class Session:
             ctx = dict(self.ctx, title="Unscheduled call")
         with self.lock:
             self.ctx = ctx
+            if self.after is not None and ctx.get("event_id") != (self.after or None):
+                self.meter.restart_at(int(self.begun * 10), self.mic, self.sys)   # its own talk, as its clock
         try:   # your agenda: pasted for this meeting before the call, else the list in the invite
             ev = event or {}
             points = (load_agendas().get(ev.get("id") or "") or {}).get("points") or agenda_points(ev.get("notes") or "", True)

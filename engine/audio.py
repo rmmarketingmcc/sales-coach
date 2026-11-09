@@ -339,6 +339,15 @@ class TalkMeter:
                 self.their_longest = max(self.their_longest, k - self.their_stretch_start)
         self.i = upto
 
+    def restart_at(self, frame: int, mic: Track, sys_: Track) -> None:
+        """Count only from frame on: the next call in the same recording. The frames before are the call
+        before's, whose talk share and longest stretches would otherwise carry over."""
+        upto, phone = self.i, self.phone
+        self.__init__()
+        self.phone, self.i = phone, frame
+        self.me, self.them = np.zeros(frame, bool), np.zeros(frame, bool)
+        self.update(mic, sys_, upto)
+
     @staticmethod
     def _smooth(arr: np.ndarray, k: int) -> bool:
         return bool(arr[max(0, k - HANGOVER):k + HANGOVER + 1].any())
