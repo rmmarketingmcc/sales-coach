@@ -1,5 +1,10 @@
 # Ændringer
 
+## 0.2.2 (9 Nov 2026)
+
+- Menulinjen tæller altid ned til dit næste møde, fx Næste om 2t 46m, i stedet for bare at sige Coach
+- Menuen viser, hvilket møde der er det næste, og hvornår
+
 ## 0.2.1 (8 Nov 2026)
 
 - Vinduet åbner kun ved et rigtigt opkald, ikke når du optager en lydbesked

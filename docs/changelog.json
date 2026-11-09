@@ -1,5 +1,13 @@
 [
  {
+  "version": "0.2.2",
+  "date": "9 Nov 2026",
+  "notes": [
+   "Menulinjen tæller altid ned til dit næste møde, fx Næste om 2t 46m, i stedet for bare at sige Coach",
+   "Menuen viser, hvilket møde der er det næste, og hvornår"
+  ]
+ },
+ {
   "version": "0.2.1",
   "date": "8 Nov 2026",
   "notes": [
