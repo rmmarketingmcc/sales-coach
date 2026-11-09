@@ -945,9 +945,15 @@ def create_booking(d: dict, folder: Path | None) -> str:
 
 class Session:
     def __init__(self, folder: Path, started: datetime, *, replay: dict | None = None, use_llm: bool = True,
-                 event: dict | None = None, whisper: bool = True, feed: list[dict] | None = None):
+                 event: dict | None = None, whisper: bool = True, feed: list[dict] | None = None,
+                 after: str | None = None):
         settings = load_settings()
         self.folder, self.started = folder, started
+        # The recording's earlier call hung up and this one took the mic in the same recording: where it begins,
+        # and the call before it (its calendar event id, "" for none). None: the recording's own call.
+        self.after = after
+        self.begun = round((datetime.now(timezone.utc) - started).total_seconds(), 1) \
+            if after is not None and not replay else 0.0
         self.replay = replay
         self.how = how_ai() if use_llm else "off"
         self.use_llm = self.how != "off"
@@ -1109,11 +1115,14 @@ class Session:
         return (datetime.now(timezone.utc) - self.started).total_seconds()
 
     def call_elapsed(self) -> float:
-        """Minutes into the meeting: from the calendar start when the recording began early."""
+        """Minutes into the meeting: from the calendar start when the recording began early. The next call in
+        the same recording counts from where it began; the same call picked up again keeps its clock."""
+        begun = self.begun if self.after is not None and self.ctx.get("event_id") != (self.after or None) else 0.0
         if not self.replay and self.ctx.get("start"):
             start = datetime.fromisoformat(self.ctx["start"])
-            return max(0.0, (datetime.now(timezone.utc) - max(start, self.started)).total_seconds())
-        return self.elapsed()
+            return max(0.0, (datetime.now(timezone.utc) - max(start, self.started + timedelta(seconds=begun)))
+                       .total_seconds())
+        return self.elapsed() - begun
 
     @property
     def confirmed(self) -> bool:
@@ -1134,7 +1143,9 @@ class Session:
             if self.forced_event is not None:
                 ctx = build_context(self.forced_event, self.started)
             else:
-                event = _calendar_event(self.started, datetime.now(timezone.utc))
+                # nearest start to where THIS call began: from the recording's start, a call that took the
+                # mic after the one before it hung up got that call's title, plan and clock
+                event = _calendar_event(self.started + timedelta(seconds=self.begun), datetime.now(timezone.utc))
                 ready = PREP.get((event or {}).get("id") or "") or {}
                 ctx = ready.get("ctx") or build_context(event, self.started)   # prepared ahead
         except Exception as e:  # noqa: BLE001
@@ -1745,6 +1756,7 @@ class App:
         self.last: dict | None = None
         self.last_poll = 0.0
         self.last_agent = ""
+        self.ended_event = ""                   # the ended call's calendar event, for the next one in its recording
         self.ended_folder: Path | None = None   # hung up, while the recorder still finishes that recording
         self.forgotten_at = 0.0                 # "Stop og slet": the window says it is gone
 
@@ -2457,15 +2469,17 @@ def cmd_serve(args) -> None:
                     app.last = summary
                 app.session = None
                 app.ended_folder = s.folder if hung_up and rec and rec[0] == s.folder else None
+                app.ended_event = s.ctx.get("event_id") or ""
                 log(f"call ended ({'hang-up' if hung_up else 'recording stopped'}): {s.folder.name}")
                 if s.opened and settings["enabled"] and settings.get("auto_open") != "never" and not args.no_open:
                     open_window()   # the result is the point of the minute after a call
             # a new call, or the same recording picked up again (the app took the mic back)
             if rec and app.session is None and (rec[0] != app.ended_folder or mic):
+                after = app.ended_event if rec[0] == app.ended_folder else None
                 if rec[0] == app.ended_folder:
                     app.ended_folder = None
                 log(f"call started: {rec[0].name}")
-                app.session = Session(*rec)
+                app.session = Session(*rec, after=after)
                 stop = threading.Event()
                 threading.Thread(target=run_session, args=(app, app.session, stop), daemon=True).start()
             s = app.session
