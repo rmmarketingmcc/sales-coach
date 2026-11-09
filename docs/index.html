@@ -9,9 +9,9 @@
 <meta property="og:description" content="En coach, der sidder med på dine salgsmøder. På din egen Mac, uden en bot i mødet.">
 <meta property="og:image" content="https://rmmarketingmcc.github.io/sales-coach/img/og.png">
 <link rel="icon" href="img/favicon.png">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>/* Poppins from this site, not from Google: no visitor's address goes to a third party (SIL OFL 1.1, unmodified) */
+@font-face{font-family:Poppins;font-weight:400 500;font-display:swap;src:url(brand/Poppins-Regular.ttf) format("truetype")}
+@font-face{font-family:Poppins;font-weight:600 800;font-display:swap;src:url(brand/Poppins-Bold.ttf) format("truetype")}</style>
 <link rel="stylesheet" href="brand/garet.css">
 <style>
   :root {
@@ -617,6 +617,7 @@ Næste møde</textarea>
     <p class="small">Mere om reglerne hos <a href="https://www.datatilsynet.dk">Datatilsynet</a>. Det her hjælper dig med at følge reglerne, men det er ikke juridisk rådgivning. Det er dig, der optager, så du bestemmer hvorfor og hvor længe. Med AI'en slået til går teksten fra mødet til Anthropic, firmaet bag Claude. Det står i beskeden, og tjek, at vilkårene for din Claude-plan passer til erhvervsbrug.</p>
   </section>
 
+
   <section>
     <h2>Dine møder bliver på din Mac</h2>
     <p class="lead">Optagelsen og omsætningen til tekst sker på Mac'en. Med AI'en slået til går kun teksten til Claude, på din egen Claude-konto. Intet går til os.</p>
@@ -653,6 +654,20 @@ Næste møde</textarea>
           <div><b>Intet til os</b><span>Ingen server hos os, ingen konto at oprette, ingen bot i dit møde</span></div>
         </div>
       </div>
+    </div>
+  </section>
+  <section id="sikkerhed">
+    <h2>Sikker at installere</h2>
+    <p class="lead">Coachen hører dine møder, så den er bygget til at være tryg at have på din Mac.</p>
+    <div class="rules">
+      <div class="rule"><h3>Kun optageren hører mikrofonen</h3>
+        <p>Adgangen til mikrofon og lyd hører til en lille optager-app, der kun kører sin egen kode. Din API-nøgle ligger i Mac'ens nøglering, ikke i en fil.</p></div>
+      <div class="rule"><h3>Åben kildekode, ingen adgangskode</h3>
+        <p>Al koden ligger på GitHub under MIT-licensen, og hver version bygges fra den. Installationen beder aldrig om din administrator-adgangskode.</p></div>
+      <div class="rule"><h3>Ikke underskrevet af Apple</h3>
+        <p>Vi er ikke registreret som Apple-udvikler, derfor installeres den fra Terminal. Den henter sin egen Python og de pakker, coachen bruger, fra deres officielle kilder.</p></div>
+      <div class="rule"><h3>En side uden sporing</h3>
+        <p>Siden her sætter ingen cookies og har ingen statistik, og skrifttyperne ligger på selve siden. En fejlrapport går til GitHub og er offentlig, så den udfylder kun de tekniske detaljer.</p></div>
     </div>
   </section>
 
