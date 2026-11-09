@@ -33,6 +33,33 @@ let issuesURL = URL(string: "https://github.com/rmmarketingmcc/sales-coach/issue
 let phoneFlag = recordings.appendingPathComponent(".phone_call")
 func phoneCallOn() -> Bool { FileManager.default.fileExists(atPath: phoneFlag.path) }
 
+// The next meeting on the calendar, from the coach's .schedule.json (the next 24 h of real meetings, kept
+// current for the recorder). The menu bar always counts down to it, never just "Coach".
+func nextMeeting() -> (title: String, start: Date)? {
+    guard let data = try? Data(contentsOf: recordings.appendingPathComponent(".schedule.json")),
+          let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+          let list = obj["meetings"] as? [[String: Any]] else { return nil }
+    let iso = ISO8601DateFormatter()
+    let now = Date()
+    return list.compactMap { m -> (title: String, start: Date)? in
+        guard let s = m["start"] as? String, let d = iso.date(from: s), d > now else { return nil }
+        return ((m["title"] as? String ?? "Møde").trimmingCharacters(in: .whitespaces), d)
+    }.min { $0.start < $1.start }
+}
+
+/// "2t 46m", "46 min", "under 1 min"
+func untilText(_ seconds: Int) -> String {
+    let m = max(0, seconds) / 60
+    if m >= 60 { return m % 60 == 0 ? "\(m / 60)t" : "\(m / 60)t \(m % 60)m" }
+    return m < 1 ? "under 1 min" : "\(m) min"
+}
+
+func clockText(_ d: Date) -> String {
+    let f = DateFormatter()
+    f.dateFormat = "HH:mm"
+    return f.string(from: d)
+}
+
 // MARK: - Calendar
 
 /// The Mac's Calendar to calendar.json (engine/calendar_feed.py has the format): yesterday to a week ahead,
@@ -310,7 +337,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
 
         NSApp.mainMenu = mainMenu()
         item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-        item.button?.title = "Coach"
+        item.button?.title = "Sales Coach"   // replaced by the countdown within a second
         let menu = NSMenu()
         menu.delegate = self
         item.menu = menu
@@ -364,6 +391,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
             return
         }
         menu.removeAllItems()
+        if let n = nextMeeting() {
+            let head = entry("Næste møde: \(n.title), kl. \(clockText(n.start))", nil)
+            head.isEnabled = false
+            menu.addItem(head)
+            menu.addItem(.separator())
+        }
         if let up = upcoming, let link = up["meet"] as? String, !link.isEmpty, let inS = up["in_s"] as? Int {
             let when = inS > 0 ? "om \(inS / 60) min" : "i gang"
             menu.addItem(entry("Deltag: \(up["title"] as? String ?? "næste møde") (\(when))", #selector(joinNext), tag: link))
@@ -526,7 +559,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
     // The menu bar: your talk share during a call, so it is visible even with the window hidden.
     func refreshMenubar() {
         URLSession.shared.dataTask(with: menubarURL) { [weak self] data, _, _ in
-            var title = "Coach"
+            let next = nextMeeting()
+            let countdown = next.map { "om \(untilText(Int($0.start.timeIntervalSinceNow)))" }
+            var title = countdown.map { "Næste \($0)" } ?? "Ingen møder det næste døgn"
             var tint: NSColor? = nil   // orange: the last 10 min; red: over time, or the next call is 5 min away
             var settings: [String: Any]? = nil
             var newCall: String? = nil
@@ -565,14 +600,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
                         newCall = (st["call_id"] as? String) ?? (st["title"] as? String ?? "")
                     }
                 } else if (settings?["enabled"] as? Bool) == false {
-                    title = "Coach fra"
+                    title = "Coach fra" + (countdown.map { " · næste \($0)" } ?? "")
                 } else if let inS = up?["in_s"] as? Int, inS <= 900 {
                     // between calls, from 15 min before the next meeting: orange the last 5 min, red the last 2
                     title = inS > 0 ? "Næste \(mm(inS))" : "Mødet +\(mm(-inS))"
                     tint = inS <= 120 ? .systemRed : inS <= 300 ? .systemOrange : nil
                 }
             } else {
-                title = "Coach ?"   // the coach is not answering
+                title = "Coachen svarer ikke" + (countdown.map { " · næste \($0)" } ?? "")
             }
             DispatchQueue.main.async {
                 guard let self else { return }
