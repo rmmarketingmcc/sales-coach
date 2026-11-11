@@ -31,7 +31,7 @@ curl -fsSL https://rmmarketingmcc.github.io/sales-coach/install.sh | bash
 ```
 
 It asks four questions (name, company, what you sell, language), downloads the speech model once (about 6 GB), and
-macOS asks once for the Microphone, the call audio and your Calendar. Run the same line again to update; add
+macOS asks once for the Microphone, the call audio and your Calendar. New versions (at most one a week) show as "Ny version: opdater" in the menu bar, one click. Add
 `-s -- --uninstall` after `bash` to remove it.
 
 Made by [RM Marketing](https://rm-marketing.dk). Open source under the MIT licence: use it, change it, make it your own.
@@ -91,7 +91,7 @@ An add-on is one Python file listed in the settings (`coach.py settings --addons
 
 ```bash
 ./build.sh                 # build/Sales-Coach.zip: both apps, the engine inside Sales Coach.app (Apple Silicon)
-./release.sh 0.2.1         # version, CHANGELOG from the commit subjects, GitHub release; friends update with the install line
+./release.sh 0.2.1         # version, CHANGELOG from the commit subjects, GitHub release; friends update from the menu bar
 ```
 
 Test an install without touching your own setup: `SALES_COACH_ZIP=$PWD/build/Sales-Coach.zip SALES_COACH_NO_SERVICES=1 HOME=/tmp/sc-home bash docs/install.sh`

@@ -26,9 +26,10 @@ here, and each user's own data through add-ons, so every improvement reaches eve
 - [x] After the call: audio compressed (AAC, about 15 MB an hour), deleted after 30 days (`keep_audio_days`)
 - [ ] After the call: a better full transcript when the Mac is idle; calls with nobody on the other side deleted
 - [x] Release flow like Sunscreen's: `./release.sh`, CHANGELOG from the commit subjects, GitHub release
-- [ ] "Update available" in the app, one click to update (today: run the install line again)
+- [x] "Ny version: opdater" in the menu bar (checked once a day), one click; only the coach is swapped while the
+      apps' own code is the same, so macOS keeps their permissions (`build.sh` APPS_ID, `install.sh --update`)
 - [x] Bug reports to GitHub issues from the menu bar, with the technical details filled in (never name, company or calls)
-- [ ] The check for client names and private data wired into `release.sh` (the hook is there: `SALES_COACH_LEAK_CHECK`)
+- [x] The check for client names and private data required by `release.sh` (`SALES_COACH_LEAK_CHECK`)
 - [x] The guide page (GitHub Pages) in the RM look, with the install line and real screenshots from a made-up call
 - [x] GDPR: a reminder on every call to tell them you record (message to paste in the chat, or "said it"), saved
       with the call; "Stop og slet" for the call going on; delete any saved call; audio and notes deleted after a set time

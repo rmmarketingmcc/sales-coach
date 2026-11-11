@@ -27,7 +27,26 @@ let menubarURL = URL(string: "\(base)/state?from=menubar")!   // does not count 
 let recordings = prefs.string(forKey: "recordings").map { URL(fileURLWithPath: $0) } ?? home.appendingPathComponent("CallRecordings")
 let dataDir = prefs.string(forKey: "data").map { URL(fileURLWithPath: $0) }
     ?? home.appendingPathComponent("Library/Application Support/Sales Coach")
-let appVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "dev"
+// The version is the coach's (engine/VERSION): the apps themselves only change when their own code does
+func installedVersion() -> String {
+    if let v = try? String(contentsOf: dataDir.appendingPathComponent("engine/VERSION"), encoding: .utf8) {
+        let t = v.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !t.isEmpty { return t }
+    }
+    return Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "dev"
+}
+var appVersion = installedVersion()
+let latestURL = URL(string: "https://api.github.com/repos/rmmarketingmcc/sales-coach/releases/latest")!
+let installURL = "https://rmmarketingmcc.github.io/sales-coach/install.sh"
+/// "0.3.1" > "0.3.0": numbers compared part by part
+func isNewer(_ a: String, than b: String) -> Bool {
+    let x = a.split(separator: ".").map { Int($0) ?? 0 }, y = b.split(separator: ".").map { Int($0) ?? 0 }
+    for i in 0..<max(x.count, y.count) {
+        let p = i < x.count ? x[i] : 0, q = i < y.count ? y[i] : 0
+        if p != q { return p > q }
+    }
+    return false
+}
 let issuesURL = URL(string: "https://github.com/rmmarketingmcc/sales-coach/issues/new")!
 // A phone call on speaker: the recorder records while this file exists (recorder/main.swift)
 let phoneFlag = recordings.appendingPathComponent(".phone_call")
@@ -287,6 +306,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
     var callKey = ""                    // the call the window was last placed for
     var upcoming: [String: Any]? = nil  // the next meeting between calls (title, in_s, meet), from the poll
     var inCall = false                  // a call going on, from the poll
+    // A new version (at most one a week): looked up once a day, offered in the menu, installed on one click
+    var latest: String? = nil
+    var updating = false
+    var updateFailed = false
     var noticeTried: Set<String> = []   // calls the chat message was tried for (once per call)
 
     var zoom: Double {
@@ -344,6 +367,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
         refreshMenubar()
         Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in self?.refreshMenubar() }
         calendar.start()
+        checkForUpdate()
+        Timer.scheduledTimer(withTimeInterval: 24 * 3600, repeats: true) { [weak self] _ in self?.checkForUpdate() }
     }
 
     // ---- menus
@@ -391,6 +416,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
             return
         }
         menu.removeAllItems()
+        if updating {
+            let busy = entry("Opdaterer Sales Coach...", nil)
+            busy.isEnabled = false
+            menu.addItem(busy)
+            menu.addItem(.separator())
+        } else if let v = latest, isNewer(v, than: appVersion), !inCall {
+            menu.addItem(entry(updateFailed ? "Opdateringen fejlede: prøv igen (\(v))" : "Ny version \(v): opdater", #selector(runUpdate)))
+            menu.addItem(.separator())
+        }
         if let n = nextMeeting() {
             let head = entry("Næste møde: \(n.title), kl. \(clockText(n.start))", nil)
             head.isEnabled = false
@@ -491,6 +525,42 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
     @objc func toggleOnTop() { onTop = !onTop }
     @objc func power() { post("/settings", ["enabled": !((settings["enabled"] as? Bool) ?? true)]) }
     @objc func quit() { NSApp.terminate(nil) }
+
+    // ---- updates
+
+    func checkForUpdate() {
+        var req = URLRequest(url: latestURL)
+        req.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
+        URLSession.shared.dataTask(with: req) { [weak self] data, _, _ in
+            guard let data, let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let tag = obj["tag_name"] as? String else { return }
+            DispatchQueue.main.async { self?.latest = tag.hasPrefix("v") ? String(tag.dropFirst()) : tag }
+        }.resume()
+    }
+
+    /// The install line with --update, in the background: only the coach is swapped while the apps' code is the
+    /// same (they keep macOS's permissions); new apps restart this one by themselves. Log: <data>/update.log.
+    @objc func runUpdate() {
+        guard !updating, !inCall else { return }
+        updating = true
+        updateFailed = false
+        let p = Process()
+        p.executableURL = URL(fileURLWithPath: "/bin/bash")
+        let log = dataDir.appendingPathComponent("update.log").path.replacingOccurrences(of: "'", with: "'\\''")
+        p.arguments = ["-c", "curl -fsSL '\(installURL)' | /bin/bash -s -- --update > '\(log)' 2>&1"]
+        p.terminationHandler = { [weak self] proc in
+            DispatchQueue.main.async {
+                guard let self else { return }
+                self.updating = false
+                self.updateFailed = proc.terminationStatus != 0
+                appVersion = installedVersion()
+                if !self.updateFailed {   // the new coach serves the new window
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 4) { self.web.load(URLRequest(url: pageURL)) }
+                }
+            }
+        }
+        do { try p.run() } catch { updating = false; updateFailed = true }
+    }
 
     @objc func joinNext(_ sender: NSMenuItem) {
         if let link = sender.representedObject as? String, let url = URL(string: link) { NSWorkspace.shared.open(url) }

@@ -2,7 +2,7 @@
 # Publishes a new Sales Coach version.
 #   ./release.sh 0.2.1 "Uret viser rigtig tid"   notes in Danish, one per line: they go on the page under "Nyt"
 #   ./release.sh 0.2.1                          prints the commit subjects since the last release to write from
-# Friends get it by running the install line again (docs/install.sh downloads the latest release).
+# Friends get it from "Ny version: opdater" in the menu bar (the app looks once a day), or the install line again.
 # Before anything is published, SALES_COACH_LEAK_CHECK (a script outside this repo, given the repo path)
 # must pass: no client names or private data in the code.
 set -euo pipefail
@@ -14,10 +14,13 @@ CURRENT="$(cat VERSION)"
 [[ "$(printf '%s\n%s\n' "$CURRENT" "$VERSION" | sort -V | tail -1)" == "$VERSION" ]] || { echo "Version must be at least $CURRENT"; exit 1; }
 if git rev-parse "v$VERSION" >/dev/null 2>&1; then echo "v$VERSION already exists"; exit 1; fi
 [[ -z "$(git status --porcelain)" ]] || { echo "Commit your changes first"; exit 1; }
+# a fork with no private data of its own can skip it: SALES_COACH_NO_LEAK_CHECK=1
 if [[ -n "${SALES_COACH_LEAK_CHECK:-}" ]]; then
   "$SALES_COACH_LEAK_CHECK" "$PWD" || { echo "Leak check failed: nothing released"; exit 1; }
-else
-  echo "Note: SALES_COACH_LEAK_CHECK is not set, so no check for private data ran."
+elif [[ -z "${SALES_COACH_NO_LEAK_CHECK:-}" ]]; then
+  echo "SALES_COACH_LEAK_CHECK is not set: no release without the check for private data."
+  echo "(No private data to protect? SALES_COACH_NO_LEAK_CHECK=1 ./release.sh ...)"
+  exit 1
 fi
 
 if [[ -z "$NOTES" ]]; then

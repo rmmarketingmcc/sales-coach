@@ -1,13 +1,14 @@
 #!/bin/bash
 # Installs (or updates) Sales Coach on this Mac. Run in Terminal:
 #   curl -fsSL https://rmmarketingmcc.github.io/sales-coach/install.sh | bash
-# The same line again updates it. To remove it:
+# The same line again updates it, and so does "Ny version: opdater" in the menu bar (it runs this with --update:
+# no questions, never during a call, and the apps stay as they are unless their own code changed). To remove it:
 #   curl -fsSL https://rmmarketingmcc.github.io/sales-coach/install.sh | bash -s -- --uninstall
 #
 # Everything goes in your own user account (no admin password):
-#   ~/Applications/Sales Coach.app             the window, the menu bar item and your calendar; the coach is inside it
+#   ~/Applications/Sales Coach.app             the window, the menu bar item and your calendar
 #   ~/Applications/Sales Coach Recorder.app    records your calls (microphone + call audio) to ~/CallRecordings
-#   ~/Library/Application Support/Sales Coach  settings, call history, the coach's own Python and packages
+#   ~/Library/Application Support/Sales Coach  the coach itself (engine/), settings, call history, its own Python
 #   ~/.cache/huggingface                       the speech model, Whisper large-v3 (about 6 GB, downloaded once)
 #   two background services (LaunchAgents): the recorder and the coach, both start at login
 # For tests: SALES_COACH_ZIP=<a local zip>, SALES_COACH_NO_SERVICES=1 (no services, no permission questions).
@@ -18,8 +19,8 @@ ZIP="${SALES_COACH_ZIP:-https://github.com/$REPO/releases/latest/download/Sales-
 APPS="$HOME/Applications"
 APP="$APPS/Sales Coach.app"
 REC="$APPS/Sales Coach Recorder.app"
-ENGINE="$APP/Contents/Resources/engine"
 DATA="$HOME/Library/Application Support/Sales Coach"
+ENGINE="$DATA/engine"   # outside the apps: a new coach never changes the apps, so macOS keeps their permissions
 ROOT="$HOME/CallRecordings"
 AGENTS="$HOME/Library/LaunchAgents"
 LABELS=(dk.rmmarketing.salescoach.recorder dk.rmmarketing.salescoach.engine)
@@ -87,8 +88,20 @@ uninstall() {
   echo "Talemodellen (cirka 6 GB) ligger i ~/.cache/huggingface/hub: de to mapper med \"whisper-large-v3\" i navnet."
 }
 
+# The apps' code id (build.sh APPS_ID): the same id means the very same apps, so they are left in place
+apps_id() { cat "$1/Contents/Resources/APPS_ID" 2>/dev/null || true; }
+
 main() {
   if [[ "${1:-}" == "--uninstall" ]]; then uninstall; return; fi
+  local update=""
+  [[ "${1:-}" == "--update" ]] && update=1
+  if [[ -n "$update" ]]; then
+    # never in the middle of a call: restarting the coach would end its live view
+    local busy=""
+    [[ -n "$NO_SERVICES" ]] || busy="$(curl -s -m 3 http://127.0.0.1:8765/state | "$PY" -c 'import json,sys; d=json.load(sys.stdin); print("yes" if d.get("active") or d.get("phone_on") else "")' 2>/dev/null || true)"
+    [[ -z "$busy" ]] || { echo "Et opkald kører: opdatér, når det er slut."; exit 2; }
+    [[ -f "$DATA/settings.json" ]] || { echo "Sales Coach er ikke installeret endnu: kør installationslinjen i Terminal."; exit 1; }
+  fi
 
   [[ "$(uname -m)" == "arm64" ]] || { echo "Sales Coach kræver en Mac med Apple Silicon (M1 eller nyere)."; exit 1; }
   local os
@@ -108,12 +121,29 @@ main() {
   tmp="$(mktemp -d)"
   trap 'rm -rf "'"$tmp"'"' EXIT
   if [[ -f "$ZIP" ]]; then cp "$ZIP" "$tmp/sc.zip"; else curl -fsSL "$ZIP" -o "$tmp/sc.zip"; fi
-  [[ -n "$NO_SERVICES" ]] || stop_services
+  ditto -x -k "$tmp/sc.zip" "$tmp/x"
+  local new_engine="$tmp/x/engine"
+  [[ -d "$new_engine" ]] || new_engine="$tmp/x/Sales Coach.app/Contents/Resources/engine"   # a release before 0.3
+  local same_apps=""
+  [[ -n "$(apps_id "$tmp/x/Sales Coach.app")" && "$(apps_id "$tmp/x/Sales Coach.app")" == "$(apps_id "$APP")" \
+     && "$(apps_id "$tmp/x/Sales Coach Recorder.app")" == "$(apps_id "$REC")" ]] && same_apps=1
+  if [[ -n "$NO_SERVICES" ]]; then :
+  elif [[ -n "$update" && -n "$same_apps" ]]; then launchctl bootout "gui/$UID_NUM/${LABELS[1]}" 2>/dev/null || true; sleep 1
+  else stop_services; fi
   mkdir -p "$APPS" "$DATA" "$ROOT" "$AGENTS"
-  rm -rf "$APP" "$REC"
-  ditto -x -k "$tmp/sc.zip" "$APPS/"
-  xattr -dr com.apple.quarantine "$APP" "$REC" 2>/dev/null || true
-  echo "Version $(cat "$APP/Contents/Resources/VERSION")"
+  if [[ -z "$same_apps" ]]; then
+    rm -rf "$APP" "$REC"
+    ditto "$tmp/x/Sales Coach.app" "$APP"
+    ditto "$tmp/x/Sales Coach Recorder.app" "$REC"
+    rm -rf "$APP/Contents/Resources/engine"
+    xattr -dr com.apple.quarantine "$APP" "$REC" 2>/dev/null || true
+  fi
+  rm -rf "$ENGINE.new"
+  ditto "$new_engine" "$ENGINE.new"
+  rm -rf "$ENGINE"
+  mv "$ENGINE.new" "$ENGINE"
+  [[ -f "$ENGINE/VERSION" ]] || cp "$APP/Contents/Resources/VERSION" "$ENGINE/VERSION" 2>/dev/null || true
+  echo "Version $(cat "$ENGINE/VERSION")"
 
   say "Gør coachen klar (sin egen Python, i Sales Coach-mappen)..."
   export UV_PYTHON_INSTALL_DIR="$DATA/python" UV_CACHE_DIR="$DATA/.uv-cache"
@@ -125,6 +155,14 @@ main() {
   "$uv" pip install --quiet --python "$PY" -r "$ENGINE/requirements.txt"
   "$uv" cache clean --quiet >/dev/null 2>&1 || true   # the venv holds what it needs; the cache would double the size on disk
 
+  if [[ -n "$update" && -n "$same_apps" ]]; then
+    # the coach alone is new: start it again, and the window reloads by itself
+    [[ -n "$NO_SERVICES" ]] || agent dk.rmmarketing.salescoach.engine "$DATA/coach.log" "$PY" "$ENGINE/coach.py" serve
+    echo "Opdateret til $(cat "$ENGINE/VERSION")."
+    return
+  fi
+
+  if [[ -z "$update" ]]; then
   say "Henter talemodellen (Whisper large-v3, cirka 6 GB første gang)..."
   "$PY" - <<'PYEOF'
 from huggingface_hub import snapshot_download
@@ -132,6 +170,7 @@ for repo in ("mlx-community/whisper-large-v3-mlx", "Systran/faster-whisper-large
     snapshot_download(repo)
 print("Talemodellen er klar.")
 PYEOF
+  fi
 
   if [[ -n "$first" ]]; then
     say "Et par spørgsmål, så coachen ved, hvem du er (Retur springer over)"
@@ -144,6 +183,7 @@ PYEOF
     "$PY" "$ENGINE/coach.py" settings --name "$name" --company "$company" --about "$about" --language "$lang" >/dev/null
   fi
 
+  if [[ -z "$update" ]]; then
   say "AI-delen (tjekliste, stikord og noter)"
   local claude=""
   for c in "$(command -v claude 2>/dev/null || true)" "$HOME/.local/bin/claude" "$HOME/.claude/local/claude" \
@@ -162,6 +202,7 @@ PYEOF
     if [[ -n "$key" ]]; then
       "$PY" "$ENGINE/coach.py" settings --api-key "$key" >/dev/null && echo "Gemt i din nøglering."
     fi
+  fi
   fi
 
   if [[ -n "$NO_SERVICES" ]]; then
@@ -207,7 +248,7 @@ PYEOF
   echo
   echo "Færdig. Sales Coach kører i baggrunden fra nu af: gå til et møde (Meet, Zoom, Teams, Slack...),"
   echo "så åbner coachen ved siden af det. \"Coach\" i menulinjen har kontakterne."
-  echo "Optagelser og noter: ~/CallRecordings. Opdatering: kør den samme linje igen."
+  echo "Optagelser og noter: ~/CallRecordings. Nye versioner højst én gang om ugen: \"Ny version\" i menulinjen."
 }
 
 main "$@"
