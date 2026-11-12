@@ -260,6 +260,23 @@ when nothing was agreed. "-" if none."""
 SUMMARY_SCHEMA = {"type": "object", "additionalProperties": False, "required": ["markdown"],
                   "properties": {"markdown": {"type": "string"}}}
 
+# "Aftalt indtil nu": what is agreed so far, checked every few minutes during the call, so the window can show it
+# and nudge you to sum it up before the end.
+AGREED_SYSTEM = """You follow a live call for {me} and keep the list of what is agreed so far. Lines come from \
+speech-to-text, tagged with the speaker, known exactly from the audio track; speech-to-text mangles some words, so \
+read them phonetically. {line}
+
+Return "agreed": everything agreed so far on this call, both sides, the whole list each time (not only what is \
+new): who does what, and by when if a day or time was said ("when", else ""). Short, at most 12 words each, at \
+most 8, the most important first. Only real agreements and promises, not ideas, wishes or things that were only \
+discussed. "who": "me" for {me}, "them" for the other side, "both" for both; "what" then leaves the name out \
+("Sends the invitation", not "Anna sends the invitation"). Empty when nothing is agreed yet."""
+
+AGREED_SCHEMA = {"type": "object", "additionalProperties": False, "required": ["agreed"], "properties": {
+    "agreed": {"type": "array", "items": {"type": "object", "additionalProperties": False, "required": ["who", "what", "when"],
+                                          "properties": {"who": {"type": "string", "enum": ["me", "them", "both"]},
+                                                         "what": {"type": "string"}, "when": {"type": "string"}}}}}}
+
 # Rules that hold on any call (sales research, e.g. Gong's talk-ratio studies); add-ons add their own.
 RULES = [
     ("talk", "Talk share: 40-45% on sales calls; well over 60% and the win rate collapses."),

@@ -80,6 +80,10 @@
   .cc .tag.lead { background: var(--ground); border: 1px solid var(--line); color: var(--muted); }
   /* muted in the meeting: the coach writes nothing down from your side */
   .cc .tag.mute { background: var(--warn-soft); border: 1px solid var(--warn); color: var(--warn-ink); }
+  /* "Aftalt indtil nu", and the nudge to sum it up before the end */
+  .cc .nudge, .mini .m-nudge { background: var(--warn-soft); border: 1px solid var(--warn); color: var(--warn-ink); border-radius: 8px;
+    padding: 6px 9px; font-weight: 600; margin-bottom: 6px; }
+  .mini .m-nudge { font-weight: 400; font-size: 13px; margin-bottom: 0; }
   .cc .cue .src, .cc .debrief .src { display: inline-block; margin-left: 8px; font-size: 11px; font-weight: 600; color: var(--brand-ink); }
   .cc .next { display: grid; gap: 4px; margin-top: 8px; }
   .cc .next .nx { font-size: 13.5px; font-weight: 600; color: var(--ink); background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 5px 8px; }
@@ -514,6 +518,17 @@ function itemCount(items) {
   return `${done} klaret${part ? ` · ${part} delvist` : ""} af ${items.length}`;
 }
 
+// What is agreed so far, live (the coach looks every 3 minutes), and 5 minutes before the calendar end a nudge
+// to sum it up before you hang up
+const WHO_DA = {me: "Dig", them: "Dem", both: "Begge"};
+function agreedHtml(st) {
+  const ag = st.agreed || [];
+  if (!ag.length) return "";
+  const rows = ag.map((a) => `<li><b>${esc(WHO_DA[a.who] || a.who)}:</b> ${esc(a.what)}${a.when ? ` <span class="sub">(${esc(a.when)})</span>` : ""}</li>`).join("");
+  return `<section class="agreed"><h2>Aftalt indtil nu</h2>${st.recap_nudge ? `<div class="nudge">Inden I slutter: opsummér, hvad I har aftalt</div>` : ""}
+    <ul class="bl">${rows}</ul></section>`;
+}
+
 function cueHtml(c, p) {
   return `<div class="cue ${c.kind}"${p ? ` data-p="${p}"` : ""}>${esc(c.text)}${c.source ? `<span class="src">${esc(c.source)}</span>` : ""}</div>`;
 }
@@ -882,6 +897,7 @@ function renderMini(st) {
     <div class="m-top" data-p="2.5"><span class="clock ${clockCls}">${st.countdown ? "" : `${mmss(st.elapsed)}${st.planned ? ` / ${mmss(st.planned)}` : ""}`}</span>
       <span class="m-type">${st.muted ? `<span class="tag mute">Mute</span> ` : ""}${modeTag(st)} ${esc(st.type_label)}${t ? ` · ${t[0]}-${t[1]}%` : ""}</span></div>
     ${countdown(st)}
+    ${st.recap_nudge ? `<div class="m-nudge" data-p="2"><b>Opsummér:</b> ${(st.agreed || []).slice(0, 3).map((a) => esc(a.what)).join(" · ")}</div>` : ""}
     <div class="m-talk">${avatar(st)}<span class="m-pct ${shareClass(st.share, t)}">${st.share ?? "--"}%</span>
       <div class="bar m-bar">${t ? `<div class="band" style="left:${t[0]}%;width:${t[1] - t[0]}%"></div>` : ""}<div class="fill" style="width:${st.share ?? 0}%"></div>${st.share5 != null ? `<div class="fill5" style="left:${st.share5}%"></div>` : ""}</div></div>
     ${noticeHtml(st, 1, true)}
@@ -1149,6 +1165,7 @@ function render(st) {
     </section>
     ${st.notice ? `<section>${noticeHtml(st, 1)}</section>` : ""}
     <section><h2>Nu</h2><div class="cues">${cues}</div>${nextAsk(st)}</section>
+    ${agreedHtml(st)}
     ${st.brief ? `<section><details id="brief" ${(briefOpen ?? st.elapsed < 300) ? "open" : ""}><summary>Overblik</summary><div class="brief">${briefHtml(st.brief)}</div></details></section>` : ""}
     ${agendaHtml(st.items.filter((i) => i.kind === "agenda"))}
     ${notesHtml(st.my_notes, st.call_id, false)}

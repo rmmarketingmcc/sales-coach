@@ -9,6 +9,7 @@ While you talk it shows:
 - **a short checklist** for this call, ticked off as the other side answers, with what is still missing
 - **one short cue at a time**, only when it matters: a follow-up on what they just said, a number to dig into, time running out
 - **a countdown** to the end of the meeting and to your next one
+- **what is agreed so far**, and five minutes before the end a nudge to sum it up
 
 When you hang up, you get:
 

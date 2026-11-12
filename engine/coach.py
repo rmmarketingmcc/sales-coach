@@ -72,6 +72,9 @@ ITEM_COOLDOWN = 600              # call seconds before the same checklist item m
 ITEM_CUES_MAX = 2                # ...and at most this often a call (once on a client or team meeting)
 CUE_EVERY = 90                   # call seconds between new cues on a sales call: one at a time, time to act on it
 CUE_EVERY_OTHER = 150            # ...on a client or team meeting, which wants a quiet assistant
+AGREED_FIRST = 240               # call seconds before the first look at what is agreed so far...
+AGREED_EVERY = 180               # ...and between looks
+RECAP_NUDGE_AT = 300             # seconds before the calendar end: sum up what is agreed
 HANGUP_S = 3                     # the call app let go of the mic this long ago = hung up
 MUTE_LAG = 3.0                   # s: the app reads the meeting's mute button every 2 s; a mute counts from this before
 
@@ -942,6 +945,24 @@ def _calendar_event(started: datetime, now: datetime) -> dict | None:
 # 30 min buffer checked) and the window's button opens it in your calendar (or an add-on books it). An
 # invitation reaches the other side, so it is never sent without your click.
 
+NO_WHEN = re.compile(r"|-+|ikke (sat|aftalt|nævnt|angivet)[^,]*|ukendt|ingen( dato)?|uden dato|n/?a|none|unknown|"
+                     r"not (set|said|agreed|given)[^,]*|no date", re.I)
+
+
+def agreed_list(out: dict) -> list[dict]:
+    """The model's "agreed" list, cleaned: [{who, what, when}], at most 8."""
+    rows = []
+    for x in (out or {}).get("agreed") or []:
+        x = x if isinstance(x, dict) else {}
+        what = " ".join(str(x.get("what") or "").split())
+        when = " ".join(str(x.get("when") or "").split())[:40]
+        if NO_WHEN.fullmatch(when):
+            when = ""
+        if what:
+            rows.append({"who": str(x.get("who") or ""), "what": what[:140], "when": when})
+    return rows[:8]
+
+
 def calendar_clashes(start: datetime, end: datetime) -> list[str]:
     buffer = timedelta(minutes=30)
     out = []
@@ -1061,6 +1082,10 @@ class Session:
         self.my_notes = ""                # "Tag noter her": your own notes during the call
         self._pauses: dict[float, dict] = {}   # your question's start -> the pause after it (settled ones)
         self.forgotten = False            # "Stop og slet": nothing of this call is kept
+        self.agreed: list[dict] = []      # "Aftalt indtil nu": {who, what, when}, the whole list from the last look
+        self.agreed_busy = False
+        self.last_agreed = 0.0
+        self.fresh_before_end = False     # one extra look just before the nudge, so the list is current
         self.transcriber = Transcriber(self) if whisper and feed is None else None
         self.consolidator = Consolidator(self) if self.transcriber else None
         if self.transcriber:
@@ -1284,6 +1309,52 @@ class Session:
                 self.last_cue_call = time.time()
                 self.cue_busy = True
                 threading.Thread(target=self._cue, daemon=True).start()
+        if self._agreed_due():
+            self.agreed_busy = True
+            threading.Thread(target=self._agreed_check, daemon=True).start()
+
+    # ---- "Aftalt indtil nu": what is agreed so far, a short look every AGREED_EVERY s
+    def _agreed_due(self) -> bool:
+        if not (self.use_llm and not (self.replay or self.finished or self.agreed_busy) and self.confirmed
+                and self.call_elapsed() >= AGREED_FIRST):
+            return False
+        if time.time() - self.last_agreed >= AGREED_EVERY:
+            return True
+        cd = self._countdown() if not self.fresh_before_end else None   # current just before the nudge
+        if cd and cd.get("to") == "end" and cd["left_s"] <= RECAP_NUDGE_AT + 60 and time.time() - self.last_agreed >= 45:
+            self.fresh_before_end = True
+            return True
+        return False
+
+    def _agreed_check(self) -> None:
+        try:
+            with self.lock:
+                text = self._transcript_text(cap=12000)
+                title, who = self.ctx.get("title"), self._name("them")
+                # a long call only fits its last part: the list so far carries what was agreed before that
+                before = "\n".join(f"- {a['who']}: {a['what']}" + (f" ({a['when']})" if a.get("when") else "")
+                                   for a in self.agreed)
+            if not text:
+                return
+            out = ask_json(_fill(P.AGREED_SYSTEM), f"Call: {title}, {self.me} with {who}.\n"
+                           f"AGREED SO FAR, from earlier in the call (keep each one in your list unless the transcript "
+                           f"below changes or cancels it):\n{before or '- nothing yet'}\n\nTRANSCRIPT, THE LATEST PART:\n{text}",
+                           P.AGREED_SCHEMA)
+            rows = agreed_list(out)
+            with self.lock:
+                self.agreed = rows
+            if rows:
+                log("agreed so far: " + " | ".join(f"{a['who']}: {a['what']}" for a in rows))
+        except Exception as e:  # noqa: BLE001 - never takes the live coach down
+            log(f"agreed check failed: {e}")
+        finally:
+            self.last_agreed = time.time()
+            self.agreed_busy = False
+
+    def _nudge_now(self) -> bool:
+        """RECAP_NUDGE_AT before the calendar end, with something agreed: sum it up before you hang up."""
+        cd = self._countdown() if self.agreed and not self.finished else None
+        return bool(cd and cd.get("to") == "end" and -120 <= cd["left_s"] <= RECAP_NUDGE_AT)
 
     def is_muted(self, t: float) -> bool:
         return any(a <= t and (b is None or t < b) for a, b in self.mute_iv)
@@ -1560,6 +1631,7 @@ class Session:
                 "lag": round(float(np.median(self.delays)), 1) if self.delays else None,
                 "speaking": [w for w, tr_ in (("me", self.mic), ("them", self.sys)) if tr_.utt_start is not None],
                 "muted": bool(self.mute_iv) and self.mute_iv[-1][1] is None,
+                "agreed": list(self.agreed), "recap_nudge": self._nudge_now(),
                 "ai": self.ai_state, "prep_sources": ctx.get("prep_sources") or [], "notes": self.notes,
                 "replay": bool(self.replay), "pause": self.pause_stats(ps), "my_notes": self.my_notes,
                 "notice": None if self.notice or not load_settings().get("notice", True) or self.replay
