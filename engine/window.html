@@ -622,16 +622,16 @@ const typeName = (k) => ((lastState && lastState.types) || {})[k] || TYPE_DA[k] 
 const dkDay = (t) => new Date(t).toLocaleDateString("sv-SE");
 const clock = (t, tz) => new Date(t).toLocaleTimeString("en-GB", {timeZone: tz, hour: "2-digit", minute: "2-digit"});
 const callTime = (c) => `${clock(c.start)}`;
-// What only you can do, from the check's gaps; the builders do the rest by themselves
+// What only you can do, from the check's gaps; the builders do the rest by themselves. One short line each;
+// the marker on the call says why
 function todos(c) {
   const n = c.name || c.title;
   return (c.items || []).filter((i) => i.status === "missing" || i.status === "warn").map((i) => ({
-    invite: i.status === "missing" ? `Send ${n} mødelinket på SMS eller en anden mail: invitationen kom retur`
-      : `Tjek ${n}s mailadresse: invitationen gik til en anden end leadfilens`,
-    pa: `PA til ${n}: den automatiske ${/failed/.test(i.note) ? "fejlede" : "når det ikke"}. Byg den selv, eller tag kaldet uden`,
-    talepapir: `Talepapir til ${n} fejlede: lav det selv`,
-    who: i.status === "missing" ? `Ingen leadfil for "${c.title}": opret den, så kaldet kan forberedes` : `Tjek hvem "${c.title}" er med`,
-    report: `Ingen månedsrapport til ${n}`,
+    invite: i.status === "missing" ? `${n}: send mødelinket på SMS` : `${n}: tjek mailadressen`,
+    pa: `${n}: byg PA selv`,
+    talepapir: `${n}: lav talepapir selv`,
+    who: i.status === "missing" ? `${c.title}: opret leadfil` : `${c.title}: tjek hvem det er`,
+    report: `${n}: ingen månedsrapport`,
   }[i.key])).filter(Boolean);
 }
 function dayPlan(list) {
