@@ -302,6 +302,8 @@
   .dres[hidden] { display: none; }
   .dverdict { font-weight: 700; margin: 0; }
   .dbook { display: grid; gap: 2px; background: var(--lime-soft); border: 1px solid var(--lime); border-radius: 8px; padding: 8px 10px; }
+  .dmute { font-size: 11px; font-weight: 600; padding: 1px 8px; border-radius: 999px; background: #FDF1E6; border: 1px solid #E67E22; color: #A34A0B; margin-right: 4px; }
+  .dmute[hidden] { display: none; }
   /* the timer you set yourself, as in the window */
   .dtimer { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; font-size: 12px; color: var(--faint); }
   .dtimer b { margin-right: 2px; }
@@ -395,7 +397,7 @@
           <div class="dhead"><span class="ddot"></span>Sales Coach</div>
           <div id="d-timer" class="dtimer"></div>
           <div class="dcard"><div class="drow"><b>Intro: Byg &amp; Bad</b><span id="d-clock" class="dclock">0:00 / 20:00</span></div>
-            <div class="dsub"><span id="d-kindname">Første møde</span> · mål <span id="d-target">30-45</span>% dig</div></div>
+            <div class="dsub"><span id="d-mute" class="dmute" hidden>Mute: skriver ikke dig</span><span id="d-kindname">Første møde</span> · mål <span id="d-target">30-45</span>% dig</div></div>
           <div class="dcard"><div class="dtalk"><b id="d-share" class="ok">--%</b><span id="d-split" class="dsub">dig 0:00 · dem 0:00</span></div>
             <div class="dbar"><div id="d-band" class="dband"></div><div id="d-fill" class="dfill"></div></div>
             <div id="d-pause" class="dsub"></div></div>
@@ -423,14 +425,14 @@
           <option value="30,45">1:1-samtale (mål 30-45% dig)</option>
           <option value="70,90">Oplæg (mål 70-90% dig)</option>
         </select>
-        <div class="dbtns"><button type="button" class="btn ghost" id="d-near">Spol til 5 min før slut</button><button type="button" class="btn ghost" id="d-over">Spol til over tid</button></div>
+        <div class="dbtns"><button type="button" class="btn ghost" id="d-near">Spol til 5 min før slut</button><button type="button" class="btn ghost" id="d-over">Spol til over tid</button><button type="button" class="btn ghost" id="d-mutebtn">Mute i mødet</button></div>
         <label class="dlbl" for="d-agin">Din dagsorden, et punkt pr. linje</label>
         <textarea id="d-agin" rows="4">Bogføringen i dag
 Hvad det koster
 Hvem bestemmer
 Næste møde</textarea>
         <div class="dbtns"><button type="button" class="btn ghost" id="d-use">Brug min dagsorden</button><button type="button" class="btn ghost" id="d-copy">Kopiér alt til en AI-chat</button></div>
-        <p class="small">I demoen bliver et punkt krydset af, når ordene fra punktet bliver sagt, og den anden part har svaret. I appen forstår Claude meningen, på dansk og engelsk. Prøv Oplæg som mødetype: så taler Anna for lidt.</p>
+        <p class="small">I demoen bliver et punkt krydset af, når ordene fra punktet bliver sagt, og den anden part har svaret. I appen forstår Claude meningen, på dansk og engelsk. Prøv Oplæg som mødetype: så taler Anna for lidt. Tryk Mute i mødet: så bliver det, Anna siger, hverken skrevet ned eller talt med.</p>
       </div>
     </div>
   </section>
@@ -724,6 +726,7 @@ Næste møde</textarea>
         <li>Skriver selv i Google Meets chat, at du optager</li>
         <li>Kopiér beskeden til Zoom, Teams og andre</li>
         <li>Stop og slet et møde, mens det kører</li>
+        <li>Er du på mute i Google Meet, bliver det, du siger, ikke skrevet ned</li>
         <li>Slet lyden og noterne efter det antal dage, du vælger</li>
         <li>Slet et gemt møde med ét klik</li>
         <li>Alt bliver på din Mac, AI'en kører på din egen Claude</li>
@@ -823,6 +826,7 @@ Sproget i dine møder [da]: <span class="ok">da</span>
           <h3>Giv lov til tre ting</h3>
           <p>macOS spørger én gang for hver. Tryk <b>Tillad</b>. To korte lyde tester, at optagelsen virker, og testen bliver ikke gemt.</p>
           <p>Bruger du Google Meet i Chrome: vælg én gang <b>Se &gt; Udvikler &gt; Tillad JavaScript via Apple Events</b>, så coachen kan skrive i mødets chat. I Safari hedder det Udvikler &gt; Tillad JavaScript fra Apple Events.</p>
+          <p>Vil du have, at det, du siger på mute i Google Meet, ikke bliver skrevet ned: vælg <b>Giv adgang til Tilgængelighed</b> under "Coach" i menulinjen, og sæt flueben ved Sales Coach.</p>
         </div>
         <div class="mock">
           <div class="three">
@@ -946,13 +950,19 @@ Sproget i dine møder [da]: <span class="ok">da</span>
     const mmss = (s) => `${Math.floor(Math.abs(s) / 60)}:${String(Math.floor(Math.abs(s) % 60)).padStart(2, "0")}`;
     const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"}[c]));
     let t = 0, offset = 0, playing = false, timer = null, band = [30, 45], agenda = [], sticky = null;
+    let mutes = [];   // [from, to|null]: muted in the meeting, so your words are not written down or counted
+    const mutedAt = (x) => mutes.some(([a, b]) => a <= x && (b == null || x < b));
 
     function setAgenda() {
       agenda = $("d-agin").value.split("\n").map((x) => x.replace(/^\s*(?:[-*•]|\d+[.)])\s*/, "").trim()).filter((x) => x.length >= 3)
         .slice(0, 8).map((text) => ({text, done: false, by: ""}));
     }
-    function said() { return SCRIPT.filter((l) => l.t <= t); }
-    function spoken(l) { return Math.max(0, Math.min(l.d, t - l.t)); }
+    function said() { return SCRIPT.filter((l) => l.t <= t && !(l.who === "me" && mutedAt(l.t))); }
+    function spoken(l) {
+      let s = Math.max(0, Math.min(l.d, t - l.t));
+      if (l.who === "me") mutes.forEach(([a, b]) => { s -= Math.max(0, Math.min(l.t + s, b ?? t) - Math.max(l.t, a)); });
+      return Math.max(0, s);
+    }
     function pauses() {
       const out = [];
       SCRIPT.forEach((l, i) => {
@@ -1011,6 +1021,9 @@ Sproget i dine møder [da]: <span class="ok">da</span>
       $("d-result").hidden = !done;
       if (done) $("d-resnum").textContent = `Du talte ${share}% (mål ${band[0]}-${band[1]}%) · ${answered.length} af ${ps.length} spørgsmål fik lov at blive besvaret · ${agenda.filter((a) => a.done).length}/${agenda.length} på dagsordenen`;
       $("d-play").textContent = done ? "Se det igen" : playing ? "Pause" : t > 0 ? "Fortsæt" : "Start mødet";
+      const muted = mutes.length > 0 && mutes[mutes.length - 1][1] == null;
+      $("d-mute").hidden = !muted;
+      $("d-mutebtn").textContent = muted ? "Slå mute fra" : "Mute i mødet";
     }
     function stop() { playing = false; clearInterval(timer); render(); }
     function play() {
@@ -1020,13 +1033,18 @@ Sproget i dine møder [da]: <span class="ok">da</span>
       timer = setInterval(() => { t = Math.min(END + 1.5, t + 0.1); if (t >= END + 1.5) stop(); else render(); }, 100);
       render();
     }
-    function restart() { t = 0; offset = 0; sticky = null; setAgenda(); render(); }
+    function restart() { t = 0; offset = 0; sticky = null; mutes = []; setAgenda(); render(); }
     $("d-play").onclick = () => (playing ? stop() : play());
     $("d-restart").onclick = () => { stop(); restart(); };
     $("d-kind").onchange = (e) => { band = e.target.value.split(",").map(Number); render(); };
     $("d-near").onclick = () => { offset = PLANNED - 300 - t; if (!playing) play(); };
     $("d-over").onclick = () => { offset = PLANNED + 90 - t; if (!playing) play(); };
     $("d-use").onclick = () => { setAgenda(); render(); };
+    $("d-mutebtn").onclick = () => {
+      const last = mutes[mutes.length - 1];
+      if (last && last[1] == null) last[1] = t; else mutes.push([t, null]);
+      render();
+    };
     $("d-agenda").onchange = (e) => {
       const a = agenda[Number(e.target.dataset.i)];
       if (a) { a.done = e.target.checked; a.by = "dig"; render(); }

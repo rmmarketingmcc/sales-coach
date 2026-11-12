@@ -73,6 +73,7 @@ ITEM_CUES_MAX = 2                # ...and at most this often a call (once on a c
 CUE_EVERY = 90                   # call seconds between new cues on a sales call: one at a time, time to act on it
 CUE_EVERY_OTHER = 150            # ...on a client or team meeting, which wants a quiet assistant
 HANGUP_S = 3                     # the call app let go of the mic this long ago = hung up
+MUTE_LAG = 3.0                   # s: the app reads the meeting's mute button every 2 s; a mute counts from this before
 
 # Your share of talk time per call type: lower when the job is listening, higher when you present.
 # "sales" types get booking cues and the standard questions; the others never do.
@@ -966,6 +967,11 @@ class Session:
         self.meter = TalkMeter()
         self.phone = not replay and (read_meta(folder) or {}).get("trigger") == "phone"
         self.meter.phone = self.phone
+        # Muted in the meeting: nothing of yours is transcribed or counted. The Sales Coach app reads the meeting's
+        # own mute button and posts each change (POST /mute); muted spans are silence on your track from MUTE_LAG
+        # before the post, since the app looks every 2 s
+        self.mute_iv: list[list] = []
+        self.mic.muted = self.mute_iv
         self.lines: list[dict] = []
         self.transcribed_until = 0.0
         self.default_lang = settings.get("language") or "da"
@@ -1224,7 +1230,34 @@ class Session:
                 self.cue_busy = True
                 threading.Thread(target=self._cue, daemon=True).start()
 
+    def is_muted(self, t: float) -> bool:
+        return any(a <= t and (b is None or t < b) for a, b in self.mute_iv)
+
+    def set_muted(self, muted: bool) -> None:
+        if self.phone:   # a phone call is on the Mac's mic, whatever a meeting tab shows
+            return
+        with self.lock:
+            open_iv = bool(self.mute_iv) and self.mute_iv[-1][1] is None
+            if muted == open_iv:
+                return
+            t = self.elapsed()
+            if muted:
+                a = max(0.0, t - MUTE_LAG)
+                self.mute_iv.append([a, None])
+                mic = self.mic   # what was already read from the muted stretch: silence too, and its lines gone
+                for k in range(int(a * 10), len(mic.rms)):
+                    mic.rms[k] = 0.0
+                for arr, t0 in ((mic.buf, mic.buf_t0), (mic.cbuf, mic.cons_t0)):
+                    arr[max(0, int((a - t0) * SR)):] = 0
+                self.lines = [l for l in self.lines if not (l["who"] == "me" and l["t"] >= a)]
+                self.partial.pop("me", None)
+            else:
+                self.mute_iv[-1][1] = t
+            log(f"mic {'muted' if muted else 'unmuted'} in the meeting at {mmss(t)}")
+
     def add_lines(self, lines: list[dict], done_at: float, utt: tuple[str, float] | None = None) -> None:
+        if self.mute_iv:   # a line whose audio was queued before the mute came in
+            lines = [l for l in lines if not (l["who"] == "me" and self.is_muted(l["t"]))]
         with self.lock:
             self.lines = sorted(self.lines + lines, key=lambda l: l["t"])
             self.transcribed_until = max(self.transcribed_until, done_at)
@@ -1244,6 +1277,7 @@ class Session:
         with self.lock:
             keep = [l for l in self.lines
                     if not ((l["who"] == who or self.phone) and a <= (l["t"] + l.get("end", l["t"])) / 2 < b)]
+            lines = [l for l in lines if not (l["who"] == "me" and self.is_muted(l["t"]))]
             self.lines = sorted(keep + lines, key=lambda l: l["t"])
             for l in lines:   # Claude has already seen these words in their quick form
                 w = l["who"]
@@ -1470,6 +1504,7 @@ class Session:
                          for w, p in sorted(self.partial.items(), key=lambda kv: kv[1]["t0"])],
                 "lag": round(float(np.median(self.delays)), 1) if self.delays else None,
                 "speaking": [w for w, tr_ in (("me", self.mic), ("them", self.sys)) if tr_.utt_start is not None],
+                "muted": bool(self.mute_iv) and self.mute_iv[-1][1] is None,
                 "ai": self.ai_state, "prep_sources": ctx.get("prep_sources") or [], "notes": self.notes,
                 "replay": bool(self.replay), "pause": self.pause_stats(ps), "my_notes": self.my_notes,
                 "notice": None if self.notice or not load_settings().get("notice", True) or self.replay
@@ -1856,6 +1891,10 @@ def make_handler(app: App):
                 self._json({})
             elif self.path.startswith("/note"):   # the Sales Coach app's own events, into this log
                 log(f"app: {str(body.get('msg') or '')[:200]}")
+                self._json({})
+            elif self.path.startswith("/mute"):   # the meeting's mute button, read by the Sales Coach app
+                if app.session and not app.session.finished:
+                    app.session.set_muted(bool(body.get("muted")))
                 self._json({})
             elif self.path.startswith("/phone"):
                 # the phone call on speaker has its own button at the bottom of the window, not only in the menu

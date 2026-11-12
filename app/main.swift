@@ -14,6 +14,7 @@
 //
 // Build: ./build.sh (swiftc, ad-hoc signed)
 
+import ApplicationServices
 import Cocoa
 import EventKit
 import WebKit
@@ -311,6 +312,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
     var updating = false
     var updateFailed = false
     var noticeTried: Set<String> = []   // calls the chat message was tried for (once per call)
+    // Muted in the meeting: the coach writes nothing down from your side. The meeting's own mute button, read
+    // through Accessibility (only once you allow it), sent to the coach on every change
+    var meetingMuted: Bool? = nil
+    var muteButton: AXUIElement? = nil   // owned by muteQueue
+    var muteBusy = false
+    var muteAt = Date.distantPast
+    let muteQueue = DispatchQueue(label: "salescoach.mute")
 
     var zoom: Double {
         get { prefs.object(forKey: "zoom") as? Double ?? 1.0 }
@@ -367,6 +375,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
         refreshMenubar()
         Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in self?.refreshMenubar() }
         calendar.start()
+        // whether the meeting's mute button can be read (muteWatch), in the coach's log at every start
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3) { [weak self] in
+            self?.note("mute watch: Accessibility \(AXIsProcessTrusted() ? "on" : "off (Sales Coach is not ticked under Accessibility)")")
+        }
         checkForUpdate()
         Timer.scheduledTimer(withTimeInterval: 24 * 3600, repeats: true) { [weak self] _ in self?.checkForUpdate() }
     }
@@ -488,6 +500,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
         if !calendar.allowed {
             menu.addItem(entry("Giv adgang til Kalender (så coachen kender dine møder)...", #selector(openCalendarAccess)))
         }
+        if !AXIsProcessTrusted() {
+            menu.addItem(entry("Giv adgang til Tilgængelighed (så det, du siger på mute, ikke skrives ned)...", #selector(openMuteAccess)))
+        }
         menu.addItem(.separator())
         menu.addItem(entry("Rapportér et problem...", #selector(reportProblem)))
         let about = entry("Sales Coach \(appVersion), lavet af RM Marketing", nil)
@@ -593,6 +608,93 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
         }
     }
 
+    /// macOS's own Accessibility prompt: it puts Sales Coach in the list, ticked off until you tick it
+    @objc func openMuteAccess() {
+        let opts = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary
+        if !AXIsProcessTrustedWithOptions(opts) {
+            NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!)
+        }
+    }
+
+    // ---- the meeting's mute button (Google Meet in Chrome, Brave, Edge, Arc or Safari)
+
+    static let browsers: Set<String> = ["com.google.Chrome", "com.brave.Browser", "com.microsoft.edgemac",
+                                        "company.thebrowser.Browser", "com.apple.Safari"]
+
+    /// true: muted ("Slå mikrofon til" / "Turn on microphone"), false: open, nil: not a mic toggle.
+    /// Meet also has "Denne side har adgang til ... din mikrofon", which is no toggle and must not count.
+    static func micState(_ e: AXUIElement) -> Bool? {
+        var v: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(e, kAXDescriptionAttribute as CFString, &v) == .success,
+              let d = (v as? String)?.lowercased() else { return nil }
+        if d.hasPrefix("slå mikrofon til") || d.hasPrefix("turn on microphone") { return true }
+        if d.hasPrefix("slå mikrofon fra") || d.hasPrefix("turn off microphone") { return false }
+        return nil
+    }
+
+    static func findMicButton(_ e: AXUIElement, depth: Int, budget: inout Int) -> AXUIElement? {
+        budget -= 1
+        if budget < 0 || depth > 60 { return nil }
+        var role: CFTypeRef?
+        AXUIElementCopyAttributeValue(e, kAXRoleAttribute as CFString, &role)
+        if (role as? String) == (kAXButtonRole as String), micState(e) != nil { return e }
+        var kids: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(e, kAXChildrenAttribute as CFString, &kids) == .success,
+              let list = kids as? [AXUIElement] else { return nil }
+        for k in list {
+            if let hit = findMicButton(k, depth: depth + 1, budget: &budget) { return hit }
+        }
+        return nil
+    }
+
+    /// The meeting's mute state now, or nil when no meeting tab shows a mic button (Zoom, a phone call...).
+    func readMeetingMute() -> Bool? {
+        if let b = muteButton, let m = AppDelegate.micState(b) { return m }
+        muteButton = nil
+        for app in NSWorkspace.shared.runningApplications where AppDelegate.browsers.contains(app.bundleIdentifier ?? "") {
+            let ax = AXUIElementCreateApplication(app.processIdentifier)
+            AXUIElementSetAttributeValue(ax, "AXManualAccessibility" as CFString, kCFBooleanTrue)   // Chrome: expose the page
+            var wins: CFTypeRef?
+            guard AXUIElementCopyAttributeValue(ax, kAXWindowsAttribute as CFString, &wins) == .success,
+                  let list = wins as? [AXUIElement] else { continue }
+            for w in list {
+                var t: CFTypeRef?
+                AXUIElementCopyAttributeValue(w, kAXTitleAttribute as CFString, &t)
+                guard ((t as? String) ?? "").contains("Meet") else { continue }
+                var budget = 40000
+                if let b = AppDelegate.findMicButton(w, depth: 0, budget: &budget) {
+                    muteButton = b
+                    return AppDelegate.micState(b)
+                }
+            }
+        }
+        return nil
+    }
+
+    /// Every 2 s during a call: a change in the meeting's mute goes to the coach (POST /mute), which keeps
+    /// the muted stretch out of the transcript and the talk share.
+    func muteWatch(active: Bool) {
+        guard active, AXIsProcessTrusted() else {
+            if meetingMuted == true { post("/mute", ["muted": false]) }
+            meetingMuted = nil
+            muteQueue.async { [weak self] in self?.muteButton = nil }   // the reader's own queue owns it
+            return
+        }
+        guard !muteBusy, Date().timeIntervalSince(muteAt) >= 2 else { return }
+        muteBusy = true
+        muteAt = Date()
+        muteQueue.async { [weak self] in
+            guard let self else { return }
+            let m = self.readMeetingMute()
+            DispatchQueue.main.async {
+                self.muteBusy = false
+                guard let m, m != self.meetingMuted else { return }
+                self.meetingMuted = m
+                self.post("/mute", ["muted": m])
+            }
+        }
+    }
+
     // A GitHub issue with the technical facts filled in. Issues are public: never your name, company,
     // meetings or words, only versions and switches.
     @objc func reportProblem() {
@@ -606,7 +708,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
                     + "tilføjelser: \((s["addons"] as? [Any])?.count ?? 0)"
             }
             let body = "Hvad skete der:\n\n\nHvad forventede du:\n\n\n---\nSales Coach \(appVersion), macOS \(os)\n"
-                + "Adgang til Kalender: \(self.calendar.allowed ? "ja" : "nej")\nCoach: \(coach)\n"
+                + "Adgang til Kalender: \(self.calendar.allowed ? "ja" : "nej")\n"
+                + "Adgang til Tilgængelighed: \(AXIsProcessTrusted() ? "ja" : "nej")\nCoach: \(coach)\n"
             var parts = URLComponents(url: issuesURL, resolvingAgainstBaseURL: false)!
             parts.queryItems = [URLQueryItem(name: "body", value: body)]
             DispatchQueue.main.async { if let url = parts.url { NSWorkspace.shared.open(url) } }
@@ -691,6 +794,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
                 if let settings { self.settings = settings }
                 self.upcoming = up
                 self.inCall = inCall
+                if data != nil { self.muteWatch(active: inCall) }
                 if let chatNotice, !self.noticeTried.contains(chatNotice.call) {
                     self.noticeTried.insert(chatNotice.call)
                     DispatchQueue.global(qos: .userInitiated).async {

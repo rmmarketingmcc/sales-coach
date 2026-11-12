@@ -126,6 +126,7 @@ class Track:
         self.cbuf = np.zeros(0, np.float32)  # audio since cons_t0, for the 30 s re-transcription
         self.cons_t0 = 0.0
         self.end_silence = END_SILENCE       # a practice call can lock lines in sooner
+        self.muted: list[list] = []          # [start, end|None] on the recording clock, muted in the meeting (mic only)
         self.last_voice = 0.0                # end of the last frame above the floor (recording clock)
 
     def sync_segments(self, folder: Path, segments: list[dict]) -> list[tuple[str, float, np.ndarray]]:
@@ -174,6 +175,13 @@ class Track:
         x = self.tail.read(limit)
         if not x.size:
             return 0
+        if self.muted:   # muted in the meeting: silence, so nothing is transcribed or counted as talk
+            first = (len(self.rms) * FRAME + len(self.carry)) / SR
+            x = x.copy()
+            for a, b in self.muted:
+                i, j = max(0, int((a - first) * SR)), len(x) if b is None else max(0, int((b - first) * SR))
+                if i < len(x) and j > i:
+                    x[i:j] = 0
         self.buf = np.concatenate([self.buf, x])
         self.cbuf = np.concatenate([self.cbuf, x])
         x = np.concatenate([self.carry, x])

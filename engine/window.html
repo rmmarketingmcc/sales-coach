@@ -78,6 +78,8 @@
   .cc .tag { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; }
   .cc .tag.client { background: var(--brand); color: var(--ink); }
   .cc .tag.lead { background: var(--ground); border: 1px solid var(--line); color: var(--muted); }
+  /* muted in the meeting: the coach writes nothing down from your side */
+  .cc .tag.mute { background: var(--warn-soft); border: 1px solid var(--warn); color: var(--warn-ink); }
   .cc .cue .src, .cc .debrief .src { display: inline-block; margin-left: 8px; font-size: 11px; font-weight: 600; color: var(--brand-ink); }
   .cc .next { display: grid; gap: 4px; margin-top: 8px; }
   .cc .next .nx { font-size: 13.5px; font-weight: 600; color: var(--ink); background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 5px 8px; }
@@ -878,7 +880,7 @@ function renderMini(st) {
   const talkCue = st.cues.some((c) => c.kind === "talk");
   $("#app").innerHTML = `<div class="mini">
     <div class="m-top" data-p="2.5"><span class="clock ${clockCls}">${st.countdown ? "" : `${mmss(st.elapsed)}${st.planned ? ` / ${mmss(st.planned)}` : ""}`}</span>
-      <span class="m-type">${modeTag(st)} ${esc(st.type_label)}${t ? ` · ${t[0]}-${t[1]}%` : ""}</span></div>
+      <span class="m-type">${st.muted ? `<span class="tag mute">Mute</span> ` : ""}${modeTag(st)} ${esc(st.type_label)}${t ? ` · ${t[0]}-${t[1]}%` : ""}</span></div>
     ${countdown(st)}
     <div class="m-talk">${avatar(st)}<span class="m-pct ${shareClass(st.share, t)}">${st.share ?? "--"}%</span>
       <div class="bar m-bar">${t ? `<div class="band" style="left:${t[0]}%;width:${t[1] - t[0]}%"></div>` : ""}<div class="fill" style="width:${st.share ?? 0}%"></div>${st.share5 != null ? `<div class="fill5" style="left:${st.share5}%"></div>` : ""}</div></div>
@@ -1134,7 +1136,7 @@ function render(st) {
     <section>
       <div class="top"><div class="title" title="${esc(st.title)}">${esc(st.title)}</div>
         ${st.countdown ? "" : `<div class="clock ${clockCls}">${mmss(st.elapsed)}${st.planned ? ` / ${mmss(st.planned)}` : ""}</div>`}</div>
-      <div class="row">${modeTag(st)}<select id="type" aria-label="Opkaldstype">${opts}</select><span>${t ? `mål ${t[0]}-${t[1]}% dig` : "intet mål"} · ${esc(st.type_source)}</span></div>
+      <div class="row">${st.muted ? `<span class="tag mute">Mute: skriver ikke dig</span>` : ""}${modeTag(st)}<select id="type" aria-label="Opkaldstype">${opts}</select><span>${t ? `mål ${t[0]}-${t[1]}% dig` : "intet mål"} · ${esc(st.type_source)}</span></div>
     </section>
     ${countdown(st)}
     <section>
