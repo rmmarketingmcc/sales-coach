@@ -337,6 +337,11 @@
   .cc .up { display: grid; gap: 8px; }
   .cc .up li { display: block; }
   .cc .up .lbl { font-size: 12.5px; }
+  .cc .lastc { display: grid; gap: 3px; }
+  .cc .lastc[data-call] { cursor: pointer; } .cc .lastc[data-call]:hover { border-color: var(--brand); }
+  .cc .lastc:focus-visible { outline: 2px solid var(--brand); outline-offset: 1px; }
+  .cc .lastc h2 { margin-bottom: 2px; }
+  .cc .lastc .more { color: var(--brand-ink); font-weight: 600; font-size: 12px; margin-top: 3px; }
   @media (prefers-reduced-motion: reduce) { .cc .bar .fill, .cc .bar .fill5 { transition: none; } }
   /* the timer you set yourself: its own strip at the top, outside the views */
   #timer { position: sticky; top: 0; z-index: 6; background: var(--ground); padding: 8px 14px 0; }
@@ -806,21 +811,25 @@ function nextCall(n) {
     <div class="brief">${briefHtml(n.brief)}</div></section>`;
 }
 
+// The overview keeps the last call to a few lines: the verdict, the numbers, and a click into the whole call
+// under Opkald (its result, notes, feedback and transcript), so the overview never turns into a transcript
+function lastCard(l) {
+  if (!l) return "";
+  const d = l.debrief || {};
+  const line = d.verdict || (l.debrief_status === "writing" ? "Coachen gennemgår opkaldet..." : "");
+  return `<section class="lastc"${l.folder ? ` data-call="${esc(l.folder)}" tabindex="0" role="button"` : ""}><h2>Sidste møde</h2>
+    <div class="c1"><span class="ctitle">${esc(l.title)}</span><span class="cpct ${shareClass(l.share, l.target)}">${l.share ?? "?"}%</span></div>
+    <div class="ctype">${l.started ? `${esc(dayLabel(l.started))} ${esc(clock(l.started))} · ` : ""}${l.duration_s ? `${Math.max(1, Math.round(l.duration_s / 60))} min · ` : ""}du talte${l.target ? `, mål ${l.target[0]}-${l.target[1]}%` : ""}</div>
+    ${line ? `<div class="say">${esc(line)}</div>` : ""}
+    ${l.folder ? `<div class="more">Se hele opkaldet →</div>` : ""}</section>`;
+}
 function idle(st) {
   const l = st.last;
-  if (st.next && (!st.settings || st.settings.enabled)) return nextCall(st.next) + (l ? debriefHtml(l, true) + feedbackBox(l) : "");
+  if (st.next && (!st.settings || st.settings.enabled)) return nextCall(st.next) + lastCard(l);
   const coming = st.settings && !st.settings.enabled ? "" : dayPlan(st.readiness);
   if (st.settings && !st.settings.enabled) return `<section><div class="idle" style="padding:24px 4px">Coachen er slået fra.<br>Intet bliver målt, skrevet ned eller opsummeret, før du slår den til. Optageren kører som før.</div></section>`;
   if (!l) return `<div class="idle">Venter på et opkald.<br>Åbner selv, når et opkald starter.</div>${coming}`;
-  const covered = (l.items || []).filter((i) => i.status === "covered").length;
-  const notes = l.notes_status === "writing" ? `<section><h2>Hurtige noter</h2><div class="empty">Skriver noterne ud fra den levende transskription...</div></section>`
-    : l.notes ? `<section class="notes"><h2>Hurtige noter, ${l.notes_after_s ?? "?"} sek. efter opkaldet</h2>${md(l.notes)}
-        <div class="sub">${esc(l.notes_file || "")}<br>Den fulde transskription erstatter dem, når Mac'en er ledig.</div></section>`
-    : l.notes_status === "ready" ? `<section><h2>Hurtige noter</h2><div class="empty">For lidt sagt til et resumé. Transskriptionen ligger i ${esc(l.notes_file || "optagelsesmappen")}.</div></section>`
-    : l.notes_status ? `<section><h2>Hurtige noter</h2><div class="empty">${esc(l.notes_status)}</div></section>` : "";
-  return `${coming}<section><div class="sub">Venter på et opkald. Sidste: ${esc(l.title)}</div>
-    <div class="share" style="margin-top:6px"><span class="big ${shareClass(l.share, l.target)}" style="font-size:30px">${l.share ?? "?"}%</span>
-    <span class="sub">du talte${l.target ? ` (mål ${l.target[0]}-${l.target[1]}%)` : ""}<br>længst: dig ${mmss(l.my_longest_s)}, dem ${mmss(l.their_longest_s)}${l.items && l.items.length ? ` · ${covered}/${l.items.length} på tjeklisten` : ""}</span></div>${pauseLine(l.pause)}</section>${debriefHtml(l)}${feedbackBox(l)}${l.folder ? notesHtml(l.my_notes, l.folder) : ""}${notes}${linksBar(l.links)}`;
+  return coming + lastCard(l);
 }
 
 // The Call Copilot widget (tools/callrec/widget.swift) loads ?widget=1: compact while the window is
@@ -850,12 +859,7 @@ function renderMini(st) {
          ${(n.links || []).length ? `<div class="sub links">${links(n)}</div>` : ""}`
       : st.forgotten ? `<div class="gone">Opkaldet er stoppet og slettet. Intet fra det er gemt.</div>`
       : !l ? `${dayPlanMini(st.readiness)}<div class="empty">Venter på et opkald. Åbner selv, når et starter.</div>`
-      : `${dayPlanMini(st.readiness)}
-         <div class="m-top"><span>Sidste opkald</span><span class="m-type">${esc(l.title)}</span></div>
-         <div class="m-talk"><span class="m-pct ${shareClass(l.share, l.target)}">${l.share ?? "?"}%</span><span class="sub">du talte${l.target ? `, mål ${l.target[0]}-${l.target[1]}%` : ""}</span></div>
-         ${debriefHtml(l, true)}
-         <div class="sub">${l.notes_status === "writing" ? "Skriver de hurtige noter..." : l.notes ? "Hurtige noter klar: gør vinduet højere for at læse dem." : ""}</div>
-         ${feedbackBox(l)}${linksBar(l.links)}`
+      : `${dayPlanMini(st.readiness)}${lastCard(l)}`
     }<button type="button" id="power" class="m-power">${s.enabled ? "Slå fra" : "Slå til"}</button></div>`;
     wireTabs();
     wireControls(st);
