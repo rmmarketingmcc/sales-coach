@@ -327,9 +327,39 @@
   .cc .up li { display: block; }
   .cc .up .lbl { font-size: 12.5px; }
   @media (prefers-reduced-motion: reduce) { .cc .bar .fill, .cc .bar .fill5 { transition: none; } }
+  /* the timer you set yourself: its own strip at the top, outside the views */
+  #timer { position: sticky; top: 0; z-index: 6; background: var(--ground); padding: 8px 14px 0; }
+  #timer .tp { display: flex; align-items: center; gap: 5px; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; font-size: 12px; color: var(--faint); }
+  #timer .tp::-webkit-scrollbar { display: none; }
+  #timer .tl { display: inline-flex; align-items: center; gap: 4px; flex: none; font-weight: 600; margin-right: 2px; }
+  #timer svg { width: 14px; height: 14px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  #timer button { flex: none; font: 600 12px var(--font); border: 1px solid var(--line); background: var(--card); color: var(--ink);
+    border-radius: 999px; padding: 3px 10px; cursor: pointer; }
+  #timer button:hover { border-color: var(--brand); }
+  #timer button:focus-visible, #timer input:focus-visible { outline: 2px solid var(--brand); outline-offset: 1px; }
+  #timer form { display: inline-flex; gap: 4px; flex: none; margin-left: 4px; }
+  #timer input { width: 56px; font: 12px var(--font); color: var(--ink); background: var(--card); border: 1px solid var(--line); border-radius: 999px; padding: 3px 8px; -moz-appearance: textfield; }
+  #timer input::-webkit-inner-spin-button, #timer input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+  #timer .tr { display: grid; gap: 5px; padding: 7px 10px; border-radius: 12px; background: var(--card); border: 1px solid #E3E8F0; }
+  #timer .trow { display: flex; align-items: center; gap: 6px; min-width: 0; }
+  #timer .tleft { font-size: 24px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; color: var(--ink); }
+  #timer .tlbl { margin-right: auto; font-size: 12px; font-weight: 600; color: var(--faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  #timer .tbar { height: 5px; border-radius: 3px; background: var(--track); overflow: hidden; }
+  #timer .tbar div { height: 100%; background: var(--brand); }
+  #timer .tr.warn { border-color: var(--warn); }
+  #timer .tr.warn .tleft { color: #B85F12; } #timer .tr.warn .tbar div { background: var(--warn); }
+  #timer .tr.over { background: var(--crit); border-color: var(--crit); }
+  #timer .tr.over .tleft, #timer .tr.over .tlbl { color: #fff; } #timer .tr.over .tbar { display: none; }
+  #timer .tr.paused .tleft { color: var(--faint); }
+  #timer .tr.pulse { animation: pulse .9s ease-in-out infinite alternate; }
+  @media (prefers-reduced-motion: reduce) { #timer .tr.pulse { animation: none; } }
+  body.small #timer { padding: 5px 10px 0; }
+  body.small #timer .tr { padding: 5px 8px; gap: 4px; }
+  body.small #timer .tleft { font-size: 18px; }
 </style>
 </head>
 <body>
+<div id="timer"></div>
 <main class="cc" id="app"><div class="idle">Starter...</div></main>
 <div id="phonebar"></div>
 <script>
@@ -1216,6 +1246,93 @@ function phoneBar(st) {
 function markMore() {
   document.querySelectorAll("#app .lbar").forEach((b) => b.classList.toggle("more", b.scrollWidth > b.clientWidth + 1));
 }
+
+// ---- the timer you set yourself (2, 5, 10, 15, 30 minutes or your own), a beep at zero. Its own strip above
+// the views, which are redrawn every second, with its own clock. Kept in localStorage so a reload of the window
+// keeps it running; without storage it still runs, it just forgets.
+const TIMER_MINS = [2, 5, 10, 15, 30];
+const TIMER_KEY = "salescoach.timer";
+const TIMER_ICON = `<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9.5 2h5M12 2v3"/></svg>`;
+let timer = null, timerKey = "", timerAudio = null;
+try { timer = JSON.parse(localStorage.getItem(TIMER_KEY) || "null"); } catch (e) { timer = null; }
+const timerLeft = () => timer.paused != null ? timer.paused : timer.end - Date.now();
+if (timer && !(timer.total > 0 && timerLeft() > -3600000)) timer = null;   // one left from yesterday is gone
+function saveTimer() {
+  try { if (timer) localStorage.setItem(TIMER_KEY, JSON.stringify(timer)); else localStorage.removeItem(TIMER_KEY); } catch (e) { /* no storage */ }
+}
+function unlockSound() {
+  // WebKit plays sound only from a context opened by a click: open it on the click that sets the timer
+  try { timerAudio = timerAudio || new (window.AudioContext || window.webkitAudioContext)(); timerAudio.resume(); } catch (e) { timerAudio = null; }
+}
+function ring() {
+  if (!timerAudio) return;
+  const t0 = timerAudio.currentTime;
+  for (let i = 0; i < 3; i++) {
+    const o = timerAudio.createOscillator(), g = timerAudio.createGain(), t = t0 + i * 0.35;
+    o.frequency.value = 880;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.25, t + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.25);
+    o.connect(g).connect(timerAudio.destination);
+    o.start(t);
+    o.stop(t + 0.3);
+  }
+}
+function setTimer(min) {
+  if (!(min > 0)) return;
+  const ms = Math.round(Math.min(min, 180) * 60000);
+  timer = {end: Date.now() + ms, total: ms, paused: null, rang: false};
+  unlockSound();
+  saveTimer();
+  drawTimer();
+}
+function timerAct(a) {
+  unlockSound();
+  if (a === "stop") timer = null;
+  else if (a === "pause") {
+    if (timer.paused != null) { timer.end = Date.now() + timer.paused; timer.paused = null; }
+    else timer.paused = timer.end - Date.now();
+  } else if (a === "add") {
+    const left = Math.max(0, timerLeft()) + 60000;
+    if (timer.paused != null) timer.paused = left; else timer.end = Date.now() + left;
+    timer.total = Math.max(timer.total, left);
+    timer.rang = false;
+  }
+  saveTimer();
+  drawTimer();
+}
+function drawTimer() {
+  const el = $("#timer");
+  if (!el) return;
+  if (!timer) {
+    if (timerKey === "idle") return;
+    timerKey = "idle";
+    el.innerHTML = `<div class="tp"><span class="tl">${TIMER_ICON}Timer</span>${TIMER_MINS.map((m) => `<button type="button" data-m="${m}">${m}</button>`).join("")}<span>min</span>
+      <form id="tform"><input id="tmin" type="number" min="1" max="180" step="1" placeholder="egen" aria-label="Egne minutter"><button type="submit">Start</button></form></div>`;
+    el.querySelectorAll("button[data-m]").forEach((b) => { b.onclick = () => setTimer(+b.dataset.m); });
+    // the app window is a panel that never takes focus: a click here brings it forward, so typing lands
+    $("#tmin").onfocus = () => { try { window.webkit.messageHandlers.copilot.postMessage("type"); } catch (e) { /* a browser tab */ } };
+    $("#tform").onsubmit = (e) => { e.preventDefault(); setTimer(parseFloat($("#tmin").value.replace(",", "."))); };
+    return;
+  }
+  const left = timerLeft(), paused = timer.paused != null, over = left <= 0;
+  const key = paused ? "paused" : over ? "over" : "run";
+  if (timerKey !== key) {
+    timerKey = key;
+    el.innerHTML = `<div class="tr" id="tr"><div class="trow"><span class="tleft" id="tleft"></span><span class="tlbl" id="tlbl"></span>
+      <button type="button" data-a="add">+1 min</button>${over && !paused ? "" : `<button type="button" data-a="pause">${paused ? "Fortsæt" : "Pause"}</button>`}<button type="button" data-a="stop">Stop</button></div>
+      <div class="tbar"><div id="tfill"></div></div></div>`;
+    el.querySelectorAll("button[data-a]").forEach((b) => { b.onclick = () => timerAct(b.dataset.a); });
+  }
+  const warn = !over && left <= Math.min(60000, timer.total * 0.2);
+  $("#tr").className = `tr ${paused ? "paused" : over ? "over" : warn ? "warn" : ""}${over && !paused && left > -15000 ? " pulse" : ""}`;
+  $("#tleft").textContent = over ? `+${mmss(-left / 1000)}` : mmss(Math.ceil(left / 1000));
+  $("#tlbl").textContent = paused ? "pause" : over ? "tiden er gået" : `af ${Math.round(timer.total / 60000)} min`;
+  $("#tfill").style.width = `${Math.max(0, Math.min(100, 100 * left / timer.total))}%`;
+  if (over && !paused && !timer.rang) { timer.rang = true; saveTimer(); ring(); }
+}
+drawTimer();
+setInterval(drawTimer, 250);
 
 async function tick() {
   try {

@@ -302,6 +302,16 @@
   .dres[hidden] { display: none; }
   .dverdict { font-weight: 700; margin: 0; }
   .dbook { display: grid; gap: 2px; background: var(--lime-soft); border: 1px solid var(--lime); border-radius: 8px; padding: 8px 10px; }
+  /* the timer you set yourself, as in the window */
+  .dtimer { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; font-size: 12px; color: var(--faint); }
+  .dtimer b { margin-right: 2px; }
+  .dtimer button { font: 600 12px Poppins, sans-serif; border: 1px solid var(--line); background: #fff; color: var(--ink); border-radius: 999px; padding: 3px 10px; cursor: pointer; }
+  .dtimer button:hover { border-color: var(--lime); }
+  .dtimer .dtleft { font: 800 22px Poppins, sans-serif; line-height: 1; color: var(--ink); font-variant-numeric: tabular-nums; }
+  .dtimer .dtlbl { margin-right: auto; font-weight: 600; }
+  .dtimer.warn .dtleft { color: #b35a00; }
+  .dtimer.over { background: #c0392b; border-radius: 10px; padding: 6px 10px; }
+  .dtimer.over .dtleft, .dtimer.over .dtlbl { color: #fff; }
   .dctl { display: grid; gap: 10px; align-content: start; background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 18px; box-shadow: var(--shadow); }
   .dbtns { display: flex; gap: 8px; flex-wrap: wrap; }
   .dbtns .btn { padding: 11px 16px; font-size: 14px; }
@@ -377,12 +387,13 @@
 
   <section id="try">
     <h2>Prøv den her</h2>
-    <p class="lead">Et kort, opdigtet første møde spiller her på siden, uden lyd. Sæt din egen dagsorden ind, kryds af, tag noter, skift mødetype og spol frem. Så ser du, hvad coachen ser.</p>
+    <p class="lead">Et kort, opdigtet første møde spiller her på siden, uden lyd. Sæt din egen dagsorden ind, kryds af, tag noter, sæt en timer, skift mødetype og spol frem. Så ser du, hvad coachen ser.</p>
     <div class="demo">
       <div class="dleft">
         <div class="dmenubar" aria-hidden="true"><span class="dgrey"></span><span id="d-mb" class="dpill">Coach</span><span>Tor 10:00</span></div>
         <div class="dwin">
           <div class="dhead"><span class="ddot"></span>Sales Coach</div>
+          <div id="d-timer" class="dtimer"></div>
           <div class="dcard"><div class="drow"><b>Intro: Byg &amp; Bad</b><span id="d-clock" class="dclock">0:00 / 20:00</span></div>
             <div class="dsub"><span id="d-kindname">Første møde</span> · mål <span id="d-target">30-45</span>% dig</div></div>
           <div class="dcard"><div class="dtalk"><b id="d-share" class="ok">--%</b><span id="d-split" class="dsub">dig 0:00 · dem 0:00</span></div>
@@ -682,6 +693,7 @@ Næste møde</textarea>
         <li>Besked, når du taler for meget, eller for lidt</li>
         <li>Pausen efter dine spørgsmål, og besked, når du svarer selv</li>
         <li>Dine egne noter, gemt med mødet</li>
+        <li>En timer, du selv sætter: 2, 5, 10, 15 eller 30 minutter, med et bip</li>
         <li>Transskription af begge sider, dansk og engelsk</li>
         <li>Telefonopkald på højttaler: start og stop i menuen</li>
         <li>Din egen dagsorden, til at krydse af</li>
@@ -1027,6 +1039,46 @@ Sproget i dine møder [da]: <span class="ok">da</span>
       catch (e) { $("d-copy").textContent = "Kunne ikke kopiere her"; }
       setTimeout(() => { $("d-copy").textContent = "Kopiér alt til en AI-chat"; }, 3000);
     };
+    // the timer: real minutes, as in the window, with the same buttons
+    let tEnd = null, tTotal = 0, tPaused = null;
+    function drawTimer() {
+      const el = $("d-timer");
+      if (tEnd == null && tPaused == null) {
+        if (el.dataset.k !== "idle") {
+          el.dataset.k = "idle";
+          el.className = "dtimer";
+          el.innerHTML = `<b>Timer</b>${[2, 5, 10, 15, 30].map((m) => `<button type="button" data-m="${m}">${m}</button>`).join("")}<span>min</span>`;
+        }
+        return;
+      }
+      const left = tPaused != null ? tPaused : tEnd - Date.now(), over = left <= 0;
+      const k = tPaused != null ? "paused" : over ? "over" : "run";
+      if (el.dataset.k !== k) {
+        el.dataset.k = k;
+        el.innerHTML = `<span class="dtleft"></span><span class="dtlbl"></span><button type="button" data-a="add">+1 min</button>`
+          + (over && tPaused == null ? "" : `<button type="button" data-a="pause">${tPaused != null ? "Fortsæt" : "Pause"}</button>`)
+          + `<button type="button" data-a="stop">Stop</button>`;
+      }
+      el.className = "dtimer" + (over && tPaused == null ? " over" : !over && left <= Math.min(60000, tTotal * 0.2) ? " warn" : "");
+      el.querySelector(".dtleft").textContent = over ? `+${mmss(-left / 1000)}` : mmss(Math.ceil(left / 1000));
+      el.querySelector(".dtlbl").textContent = tPaused != null ? "pause" : over ? "tiden er gået" : `af ${Math.round(tTotal / 60000)} min`;
+    }
+    $("d-timer").onclick = (e) => {
+      const b = e.target.closest("button");
+      if (!b) return;
+      if (b.dataset.m) { tTotal = +b.dataset.m * 60000; tEnd = Date.now() + tTotal; tPaused = null; }
+      else if (b.dataset.a === "stop") { tEnd = null; tPaused = null; }
+      else if (b.dataset.a === "pause") {
+        if (tPaused != null) { tEnd = Date.now() + tPaused; tPaused = null; } else { tPaused = tEnd - Date.now(); tEnd = null; }
+      } else if (b.dataset.a === "add") {
+        const left = Math.max(0, tPaused != null ? tPaused : tEnd - Date.now()) + 60000;
+        if (tPaused != null) tPaused = left; else tEnd = Date.now() + left;
+        tTotal = Math.max(tTotal, left);
+      }
+      drawTimer();
+    };
+    drawTimer();
+    setInterval(drawTimer, 250);
     restart();
   })();
 
