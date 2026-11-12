@@ -323,7 +323,8 @@
   .cc .wchart text.wl { font-weight: 400; fill: var(--faint); }
   .cc .wchart text.tlb { text-anchor: end; font-weight: 600; fill: var(--ink); }
   .cc .tip { display: grid; gap: 2px; padding: 8px 0 2px; border-top: 1px solid #EDF1F6; font-size: 13px; }
-  .cc .tip .how { color: var(--ink); } .cc .ex { color: var(--faint); font-size: 12px; }
+  .cc .tip .how { color: var(--muted); font-size: 12.5px; }
+  .cc .tip.good { color: var(--brand-ink); font-weight: 600; } .cc .ex { color: var(--faint); font-size: 12px; }
   .cc .jn input { accent-color: var(--brand-ink); margin: 0; }
   .cc .todo-box { border-left: 4px solid var(--crit); }
   .cc .todo-box li { display: list-item; font-size: 13px; color: var(--ink); }
@@ -964,22 +965,20 @@ function growthHtml() {
     const trend = p == null || !prev ? "" : p > prev.pct ? `<span class="trend up">↑ bedre end uge ${weekNo(prev.week)}</span>`
       : p < prev.pct ? `<span class="trend down">↓ værre end uge ${weekNo(prev.week)}</span>` : `<span class="trend flat">som uge ${weekNo(prev.week)}</span>`;
     const dots = (x.calls || []).map((c) => `<i class="${c.hit ? "" : "bad"}" title="${esc(c.info)}"></i>`).join("");
-    return `<div class="gl"><div class="gl-h"><b>${esc(x.label)}</b><span class="gl-n ${p == null ? "" : bad ? "bad" : "ok"}">${x.this.of ? `${x.this.hit} af ${x.this.of} møder` : "ingen møder endnu"}</span></div>
+    return `<div class="gl"><div class="gl-h"><b title="${esc(x.about)} · mål: ${x.target >= 100 ? "hvert møde" : `${x.target}% af møderne`}">${esc(x.label)}</b><span class="gl-n ${p == null ? "" : bad ? "bad" : "ok"}">${x.this.of ? `${x.this.hit} af ${x.this.of} møder` : "ingen møder endnu"}</span></div>
       <div class="gl-h"><span class="gl-dots" aria-label="Ugens møder: ${x.this.hit} af ${x.this.of} klarede målet">${dots}</span>${trend}</div>
-      ${weekChart(x.weeks, x.target, x.label)}
-      <div class="sub">${esc(x.about)} · mål: ${x.target >= 100 ? "hvert møde" : `${x.target}% af møderne`}</div></div>`;
+      ${weekChart(x.weeks, x.target, x.label)}</div>`;
   };
   const c = g.coach;
   const atIso = g.coach_at ? new Date(g.coach_at * 1000).toISOString() : "";
   const at = atIso ? `${new Date(atIso).toLocaleDateString("da-DK", {day: "numeric", month: "short"})} ${clock(atIso)}` : "";
   const read = !c ? `<div class="empty">Coachen læser dine opkald. Det tager et minut.</div>`
     : `<div class="lbl">${esc(c.headline)}</div>
-      ${(c.practise || []).slice(0, 2).map((x, i) => `<div class="tip"><b>${i + 1}. ${esc(x.text)}</b>
-        <div class="sub">${esc(x.why)}</div><div class="how">Sådan: ${esc(x.how)}</div><div class="ex">${esc(x.example)}</div></div>`).join("")}
-      ${(c.strengths || []).slice(0, 1).map((x) => `<div class="tip"><b>Det gør du godt:</b> ${esc(x.text)} <span class="ex">${esc(x.example)}</span></div>`).join("")}
-      <div class="sub" style="margin-top:6px">Coachens læsning af dine sidste ${g.coach_calls || ""} opkald med coachen${at ? `, ${at}` : ""}</div>`;
-  return `<section><h2>Ugens 3 mål, uge ${weekNo(g.week)}</h2>${g.goals.map(goalRow).join("")}
-      <div class="sub" style="margin-top:6px">Til tiden måles fra, da den anden part sidst talte, mod kalenderens sluttid.</div></section>
+      ${(c.practise || []).slice(0, 2).map((x, i) => `<div class="tip" title="${esc([x.why, x.example].filter(Boolean).join(" · "))}"><b>${i + 1}. ${esc(x.text)}</b>
+        ${x.how ? `<div class="how">${esc(x.how)}</div>` : ""}</div>`).join("")}
+      ${(c.strengths || []).slice(0, 1).map((x) => `<div class="tip good">✓ ${esc(x.text)}</div>`).join("")}
+      <div class="sub" style="margin-top:4px">Fra dine sidste ${g.coach_calls || ""} opkald${at ? ` · ${at}` : ""}</div>`;
+  return `<section><h2>Ugens 3 mål, uge ${weekNo(g.week)}</h2>${g.goals.map(goalRow).join("")}</section>
     ${pauseWeek(g)}
     <section><h2>Sådan står du</h2>${read}</section>`;
 }
