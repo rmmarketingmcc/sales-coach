@@ -702,13 +702,15 @@ def prep_upcoming() -> None:
             if not now - timedelta(minutes=5) <= start <= now + BRIEF_AHEAD:
                 continue
             old = PREP.get(ev["id"]) or {}
+            if old:   # your answer changes no prep, but decides which of two meetings at once is yours
+                old["rsvp"] = _rsvp(ev)
             moved = old and (old.get("updated") != ev.get("updated") or old["start"] != start)
             late = (old.get("status") == "ready" and not old.get("refreshed") and start - now <= REFRESH_BEFORE
                     and old.get("prepared_at", "") < (start - REFRESH_BEFORE).isoformat())
             if old and not moved and not late:
                 continue
             entry = {"start": start, "title": ev.get("title") or "", "status": "preparing", "updated": ev.get("updated"),
-                     "opened": old.get("opened"), "refreshed": bool(late)}
+                     "rsvp": _rsvp(ev), "opened": old.get("opened"), "refreshed": bool(late)}
             PREP[ev["id"]] = entry if not old else {**old, **{k: v for k, v in entry.items() if k != "status"}}
             log(f"preparing {'again' if old else 'ahead'}: {entry['title']}")
             try:
@@ -794,9 +796,52 @@ def _mark_joined(key: str, how: str) -> None:
         log(f"join state not saved: {e}")
 
 
+# ---- two meetings at the same time on paper, and you are only in one: that one counts. The one you are on, else
+# the one you accepted over a tentative or unanswered one. Only its link is opened and the other is let go, so
+# the countdown, the window and the auto-opened link are not the other one's.
+SAME_SLOT = timedelta(minutes=10)   # starts this close and overlapping: the same time on paper
+RSVP_RANK = {"accepted": 0, "tentative": 1, "pending": 2}
+
+
+def _rsvp(ev: dict) -> str:
+    """Your answer to the invite; your own event without a guest row for you counts as accepted."""
+    me = next((a for a in ev.get("attendees") or [] if a.get("self")), None)
+    return (me or {}).get("status") or "accepted"
+
+
+def same_slot(a: tuple[datetime, datetime], b: tuple[datetime, datetime]) -> bool:
+    """(start, end) pairs: the same time on paper, not one call after another."""
+    return abs(a[0] - b[0]) <= SAME_SLOT and a[0] < b[1] and b[0] < a[1]
+
+
+def _span(ev: dict) -> tuple[datetime, datetime]:
+    return cal.parse_ts(ev["start"]), cal.parse_ts(ev["end"])
+
+
+def _prep_span(v: dict) -> tuple[datetime, datetime]:
+    end = (v.get("ctx") or {}).get("end")
+    return v["start"], datetime.fromisoformat(end) if end else v["start"] + timedelta(minutes=30)
+
+
+def _prep_same_slot(a: dict, b: dict) -> bool:
+    return same_slot(_prep_span(a), _prep_span(b))
+
+
+def let_go_rivals(key: str, why: str) -> None:
+    """The prepared calls at the same time as `key` (the one you are in, or the one whose link was opened): no
+    countdown, no link opened for them."""
+    me = PREP.get(key)
+    if not me:
+        return
+    for k, v in list(PREP.items()):
+        if k != key and (JOINED.get(k) or {}).get("how") not in ("attended", "skipped") and _prep_same_slot(me, v):
+            _mark_joined(k, "skipped")
+            log(f"meeting link not opened: {v['title']} is at the same time as {me['title']}, {why}")
+
+
 def upcoming(now: datetime | None = None) -> dict | None:
     """The meeting to count down to between calls: the soonest prepared one in the next hour, or one that
-    started under JOIN_LATE ago and is not over."""
+    started under JOIN_LATE ago and is not over. Of two at the same time, the one you accepted."""
     now = now or datetime.now(timezone.utc)
     soon = []
     for k, v in list(PREP.items()):
@@ -811,6 +856,8 @@ def upcoming(now: datetime | None = None) -> dict | None:
     if not soon:
         return None
     k, v = min(soon, key=lambda kv: kv[1]["start"])
+    k, v = min(((k2, v2) for k2, v2 in soon if k2 == k or _prep_same_slot(v, v2)),
+               key=lambda kv: (RSVP_RANK.get(kv[1].get("rsvp") or "accepted", 2), kv[1]["start"]))
     ctx = v.get("ctx") or {}
     return {"id": k, "title": v["title"], "start": v["start"].isoformat(),
             "in_s": round((v["start"] - now).total_seconds()), "meet": ctx.get("meet"),
@@ -826,6 +873,8 @@ def join_tick(app: "App", settings: dict) -> None:
     s = app.session
     if s and s.ctx.get("event_id"):
         _mark_joined(s.ctx["event_id"], "attended")
+        if s.confirmed:   # someone on the other side: this is the one you are in
+            let_go_rivals(s.ctx["event_id"], "and you are in that one")
     if not settings["enabled"] or not settings.get("auto_join", True):
         return
     now = datetime.now(timezone.utc)
@@ -850,6 +899,7 @@ def join_tick(app: "App", settings: dict) -> None:
         return
     subprocess.Popen(["open", ev["meet"]], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     _mark_joined(u["id"], "opened")
+    let_go_rivals(u["id"], "whose link was opened (the one you accepted)")
     lead = (start - now).total_seconds()
     log(f"opened the meeting {mmss(abs(lead))} {'before' if lead >= 0 else 'after'} the start: {u['title']}")
 
@@ -870,9 +920,11 @@ def next_call() -> dict | None:
 
 
 def _calendar_event(started: datetime, now: datetime) -> dict | None:
-    """The calendar call this recording belongs to: overlaps now, nearest start."""
+    """The calendar call this recording belongs to: overlaps now, nearest start, and of two at the same time the
+    one you accepted."""
     best = None
-    for ev in cal.events(DATA, started - timedelta(hours=3), now + timedelta(hours=3)) or []:
+    items = cal.events(DATA, started - timedelta(hours=3), now + timedelta(hours=3)) or []
+    for ev in items:
         if not cal.is_call(ev):
             continue
         s, e = cal.parse_ts(ev["start"]), cal.parse_ts(ev["end"])
@@ -880,7 +932,10 @@ def _calendar_event(started: datetime, now: datetime) -> dict | None:
             gap = abs((s - started).total_seconds())
             if best is None or gap < best[0]:
                 best = (gap, ev)
-    return best[1] if best else None
+    if not best:
+        return None
+    rivals = [ev for ev in items if cal.is_call(ev) and same_slot(_span(ev), _span(best[1]))]
+    return min(rivals, key=lambda ev: (RSVP_RANK.get(_rsvp(ev), 2), abs((_span(ev)[0] - started).total_seconds())))
 
 
 # ---- booking the next meeting: the debrief reads the agreed day and time; this drafts the event (clashes and a
