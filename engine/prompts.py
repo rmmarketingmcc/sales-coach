@@ -79,6 +79,10 @@ next period's plan with dates.
 - team call: the agenda points from the invite's text, else the open threads from the last call (what was \
 agreed and its status, what you need from them, what they need from you), at most 5, each label the decision \
 or update to get. Goal: decisions with an owner and a date, done on time. No sales items, no booking item.
+Every say is a line to the people on THIS call, about their part. What {me}'s own colleagues do is settled \
+internally: never ask a client or partner what a colleague of {me} does or when they have time; ask for their own \
+part instead (who on their side does it, and by when), and put the colleague's part in the brief. Only a team \
+call with that colleague on it asks them directly.
 Never: a question they already answered, a claim the sources do not show stated as fact, lines in another \
 language than above. Short beats complete: the whole brief should read in under a minute.
 
