@@ -1,5 +1,24 @@
 [
  {
+  "version": "0.2.3",
+  "date": "12 Nov 2026",
+  "notes": [
+   "Ny version direkte fra menulinjen: \"Ny version: opdater\", ét klik, aldrig midt i et møde",
+   "Mac'ens tilladelser (mikrofon, mødelyd, kalender) bliver liggende, når du opdaterer",
+   "Noterne fra sidste opkald vises også efter en genstart, i stedet for at stå og blive skrevet for altid",
+   "Sæt en timer i vinduet: 2, 5, 10, 15 eller 30 minutter eller din egen, med et bip ved nul",
+   "Et smalt vindue skjuler navnet helt i stedet for at klippe det over, og den grønne prik bliver",
+   "Bliv bedre er kortere: ét tip pr. linje og hvordan, resten når du holder musen over",
+   "Telefonopkald er en lille, rolig knap mellem møderne og bliver først rød og bred, når den optager",
+   "Overblik viser sidste møde som et kort med vurderingen, og ét klik åbner hele opkaldet",
+   "Er du på mute i Google Meet, bliver det, du siger, hverken skrevet ned eller talt med i din taleandel",
+   "To møder på samme tid: det, du har sagt ja til, tæller, og kun dets link åbner",
+   "Vinduet viser, hvad I har aftalt indtil nu, og minder dig om at opsummere 5 minutter før slut",
+   "\"Du skal selv\" siger hver ting på én kort linje",
+   "Tjeklisten spørger aldrig den anden part, hvad en af dine kolleger laver, men til deres egen del"
+  ]
+ },
+ {
   "version": "0.2.2",
   "date": "9 Nov 2026",
   "notes": [
