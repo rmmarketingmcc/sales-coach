@@ -1652,6 +1652,14 @@ class Session:
         except Exception as e:  # noqa: BLE001
             summary["notes_status"] = f"failed: {str(e)[:120]}"
             log(f"notes failed: {e}")
+        finally:
+            # the debrief often saves copilot.json first, while this still said "writing": saved again with the
+            # outcome, or after a restart the window says it is writing the notes for good
+            if not self.replay and (self.folder / "copilot.json").exists():
+                try:
+                    (self.folder / "copilot.json").write_text(json.dumps(summary, ensure_ascii=False, indent=1, default=str))
+                except (OSError, RuntimeError, TypeError) as e:   # RuntimeError: the debrief changed it meanwhile
+                    log(f"copilot.json not updated after the notes: {e}")
 
 
 # ---- hang-up detection: the recorder stops 30 s after the call app lets go of the mic; the result should be
